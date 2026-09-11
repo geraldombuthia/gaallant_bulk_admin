@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { readSession } from "@/lib/auth/session";
 import { countByStatus } from "@/lib/db/templates";
 import { supportCounts } from "@/lib/db/support";
+import { scanSent } from "@/lib/db/compliance";
 import { signOut } from "./actions";
 
 const nav = [
@@ -12,7 +13,9 @@ const nav = [
     { href: "/users", label: "Users" },
     { href: "/support", label: "Support", badge: "support" },
     { href: "/payments", label: "Payments" },
+    { href: "/finance", label: "Finance" },
     { href: "/pricing", label: "Pricing" },
+    { href: "/compliance", label: "Compliance", badge: "compliance" },
     { href: "/sign-ins", label: "Sign-ins" },
     { href: "/audit", label: "Audit log" },
 ] as const;
@@ -22,8 +25,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     if (!session) redirect("/login");
 
     // Queue sizes in the nav, so a reviewer sees work waiting from any page
-    const [templates, support] = await Promise.all([countByStatus(), supportCounts()]);
-    const badges: Record<string, number> = { templates: templates.pending, support: support.open };
+    const [templates, support, scan] = await Promise.all([
+        countByStatus(), supportCounts(), scanSent({ sinceDays: 7, minSeverity: "block", limit: 500 }),
+    ]);
+    const badges: Record<string, number> = { templates: templates.pending, support: support.open, compliance: scan.hits.length };
 
     return (
         <div className="flex min-h-screen">

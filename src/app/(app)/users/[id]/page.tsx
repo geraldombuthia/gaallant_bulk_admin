@@ -73,8 +73,8 @@ export default async function UserPage({ params }: { params: Promise<{ id: strin
                         </Card>
                         <Card title="Credit ledger">
                             {ledger.length === 0 ? <Empty>None.</Empty> : (
-                                <Table head={["When", "Credits", "Type", "Unit price"]}>
-                                    {ledger.map((l) => <tr key={l.id}><Td className="whitespace-nowrap text-xs">{when(l.createdAt)}</Td><Td className={`text-right ${Number(l.creditsValue) < 0 ? "text-red-700" : ""}`}>{Number(l.creditsValue) > 0 ? "+" : ""}{num(l.creditsValue)}</Td><Td className="text-xs">{l.productType}</Td><Td className="text-right text-xs">{l.price_per_unit ?? "—"}</Td></tr>)}
+                                <Table head={["When", "SMS units", "Paid", "Type", "Unit price"]}>
+                                    {ledger.map((l) => <tr key={l.id}><Td className="whitespace-nowrap text-xs">{when(l.createdAt)}</Td><Td className={`text-right ${Number(l.creditUnit) < 0 ? "text-red-700" : ""}`}>{Number(l.creditUnit) > 0 ? "+" : ""}{num(l.creditUnit)}</Td><Td className="text-right">{Number(l.creditsValue) > 0 ? kes(l.creditsValue) : <span className="text-ink-3">—</span>}</Td><Td className="text-xs">{l.productType}</Td><Td className="text-right text-xs">{Number(l.price_per_unit) > 0 ? kes(l.price_per_unit) : "—"}</Td></tr>)}
                                 </Table>
                             )}
                         </Card>

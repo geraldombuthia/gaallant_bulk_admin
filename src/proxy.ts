@@ -11,6 +11,10 @@ const COOKIE = "admin_session";
 
 export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
+    // The review API authenticates with its own bearer token, not a session
+    if (pathname.startsWith("/api/review")) {
+        return NextResponse.next();
+    }
     const isLogin = pathname === "/login";
     const token = request.cookies.get(COOKIE)?.value;
 

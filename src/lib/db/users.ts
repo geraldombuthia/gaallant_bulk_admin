@@ -134,10 +134,12 @@ export async function adjustCredits(userId: number, delta: number, reason: strin
         if (after < 0) throw new Error(`Balance would go negative (${before} ${delta > 0 ? "+" : ""}${delta})`);
 
         await conn.execute("UPDATE SMSCredits SET creditBalance = ?, lastmodified = NOW() WHERE userId = ?", [after, userId]);
-        // price_per_unit 0: an adjustment is not a sale, so it contributes
-        // nothing to revenue when the ledger is summed by units x price.
+        // Ledger semantics: creditsValue is KSh paid, creditUnit is SMS units.
+        // An adjustment moves units with no money changing hands, so it is
+        // 0 KSh and delta units at price 0 -- it reconciles as units and
+        // contributes nothing to revenue.
         await conn.execute(
-            "INSERT INTO Credits (userId, paymentId, creditsValue, creditUnit, productType, price_per_unit, createdAt, lastModified) VALUES (?, NULL, ?, 0, 'adjustment', 0, NOW(), NOW())",
+            "INSERT INTO Credits (userId, paymentId, creditsValue, creditUnit, productType, price_per_unit, createdAt, lastModified) VALUES (?, NULL, 0, ?, 'adjustment', 0, NOW(), NOW())",
             [userId, delta]
         );
         const run: Runner = async (sql, params = []) => { const [r] = await conn.execute<import("mysql2/promise").ResultSetHeader>(sql, params); return r; };
