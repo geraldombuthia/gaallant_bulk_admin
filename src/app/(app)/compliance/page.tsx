@@ -75,7 +75,7 @@ export default async function Compliance({ searchParams }: { searchParams: Promi
                             <tr key={h.id}>
                                 <Td className="whitespace-nowrap text-xs"><Link href={`/messages/${h.id}`} className="text-brand hover:underline">{when(h.createdAt)}</Link></Td>
                                 <Td><Link href={`/users/${h.userId}`} className="text-brand hover:underline">{h.owner_name}</Link></Td>
-                                <Td className="max-w-lg text-xs">{h.message}</Td>
+                                <Td className="max-w-lg text-xs [overflow-wrap:anywhere]">{h.message}</Td>
                                 <Td><div className="flex flex-wrap gap-1">{h.flags.map((f) => <Badge key={f.id} tone={f.severity === "block" ? "danger" : f.severity === "warn" ? "warn" : "neutral"} title={f.detail}>{f.id}</Badge>)}</div></Td>
                             </tr>
                         ))}

@@ -58,7 +58,7 @@ export default async function UserPage({ params }: { params: Promise<{ id: strin
                     <Card title="Recent messages" action={<Link href={`/messages?user=${u.id}`} className="text-xs text-brand">All</Link>}>
                         {messages.length === 0 ? <Empty>None.</Empty> : (
                             <Table head={["Sent", "To", "Message", "Status", "Cost"]}>
-                                {messages.map((m) => <tr key={m.id}><Td className="whitespace-nowrap"><Link href={`/messages/${m.id}`} className="text-brand hover:underline">{when(m.createdAt)}</Link></Td><Td mono>{m.phoneNumber}{m.isTest ? " (test)" : ""}</Td><Td className="max-w-sm text-xs">{truncate(m.message, 80)}</Td><Td><StatusBadge status={m.deliveryStatus} /></Td><Td className="text-right">{m.cost ?? "—"}</Td></tr>)}
+                                {messages.map((m) => <tr key={m.id}><Td className="whitespace-nowrap"><Link href={`/messages/${m.id}`} className="text-brand hover:underline">{when(m.createdAt)}</Link></Td><Td mono>{m.phoneNumber}{m.isTest ? " (test)" : ""}</Td><Td className="max-w-sm text-xs [overflow-wrap:anywhere]">{truncate(m.message, 80)}</Td><Td><StatusBadge status={m.deliveryStatus} /></Td><Td className="text-right">{m.cost ?? "—"}</Td></tr>)}
                             </Table>
                         )}
                     </Card>

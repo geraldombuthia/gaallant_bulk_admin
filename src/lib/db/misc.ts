@@ -112,8 +112,8 @@ export async function overview() {
     );
     const [credits] = await query<RowDataPacket & { outstanding: string | null }>(`SELECT SUM(creditBalance) AS outstanding FROM SMSCredits`);
     const daily = await query<RowDataPacket & { day: string; sent: number; failed: number }>(
-        `SELECT DATE(createdAt) AS day, COUNT(*) AS sent, SUM(deliveryStatus IN ('failed','error','rejected')) AS failed
-         FROM SMSMsg WHERE isTest = 0 AND createdAt >= DATE_SUB(CURDATE(), INTERVAL 13 DAY) GROUP BY DATE(createdAt) ORDER BY day`
+        `SELECT DATE_FORMAT(createdAt, '%Y-%m-%d') AS day, COUNT(*) AS sent, SUM(deliveryStatus IN ('failed','error','rejected')) AS failed
+         FROM SMSMsg WHERE isTest = 0 AND createdAt >= DATE_SUB(CURDATE(), INTERVAL 13 DAY) GROUP BY day ORDER BY day`
     );
     return {
         users: { total: Number(users.total), new7: Number(users.new7 ?? 0), registered: Number(users.registered ?? 0) },
@@ -122,7 +122,18 @@ export async function overview() {
         payments: { amount7: Number(pay.amount7 ?? 0), count7: Number(pay.count7 ?? 0), amount30: Number(pay.amount30 ?? 0) },
         security: { failed24: Number(sec.failed24) },
         creditsOutstanding: Number(credits.outstanding ?? 0),
-        daily: daily.map((d) => ({ day: String(d.day).slice(0, 10), sent: Number(d.sent), failed: Number(d.failed) })),
+        // Dense: every one of the 14 days is present, zero when quiet, so the
+        // chart keeps its frame instead of stretching one bar across it
+        daily: (() => {
+            const byDay = Object.fromEntries(daily.map((d) => [String(d.day).slice(0, 10), d]));
+            const out: { day: string; sent: number; failed: number }[] = [];
+            for (let i = 13; i >= 0; i--) {
+                const dt = new Date(); dt.setUTCHours(0, 0, 0, 0); dt.setUTCDate(dt.getUTCDate() - i);
+                const key = dt.toISOString().slice(0, 10);
+                out.push({ day: key, sent: Number(byDay[key]?.sent ?? 0), failed: Number(byDay[key]?.failed ?? 0) });
+            }
+            return out;
+        })(),
     };
 }
 

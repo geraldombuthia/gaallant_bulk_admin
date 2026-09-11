@@ -18,6 +18,10 @@
   --brand-strong: #3d4489;
   --brand-soft: #eceef8;
   --brand-ring: #9aa0d6;
+  --brand-fill: #5058a8;
+  --brand-fill-hover: #3d4489;
+  --danger-fill: #c2331f;
+  --warn-fill: #a2650e;
 
   --page: #f4f5f9;
   --surface: #ffffff;
@@ -47,6 +51,10 @@
     --brand-strong: #a8aeec;
     --brand-soft: #23264a;
     --brand-ring: #5058a8;
+    --brand-fill: #5b64c4;
+    --brand-fill-hover: #6e77d6;
+    --danger-fill: #b5382a;
+    --warn-fill: #9a6a1a;
 
     --page: #101220;
     --surface: #171a2b;
@@ -71,6 +79,7 @@
 }
 :root[data-theme="dark"] {
   --brand: #8b92e0; --brand-strong: #a8aeec; --brand-soft: #23264a; --brand-ring: #5058a8;
+  --brand-fill: #5b64c4; --brand-fill-hover: #6e77d6; --danger-fill: #b5382a; --warn-fill: #9a6a1a;
   --page: #101220; --surface: #171a2b; --surface-2: #1c1f33; --surface-3: #232741; --line: #2a2e47; --line-2: #22263c;
   --ink: #e8e9f2; --ink-2: #b6b9cc; --ink-3: #8a8ea6; --ink-4: #62667f;
   --ok: #4fd1b5; --ok-soft: #12332d; --warn: #f0b458; --warn-soft: #3a2c14; --danger: #f28b7a; --danger-soft: #3d1c18; --info: #a8aeec; --info-soft: #23264a;
@@ -82,6 +91,10 @@
   --color-brand: var(--brand);
   --color-brand-strong: var(--brand-strong);
   --color-brand-soft: var(--brand-soft);
+  --color-brand-fill: var(--brand-fill);
+  --color-brand-fill-hover: var(--brand-fill-hover);
+  --color-danger-fill: var(--danger-fill);
+  --color-warn-fill: var(--warn-fill);
   --color-page: var(--page);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);

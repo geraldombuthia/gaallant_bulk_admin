@@ -49,7 +49,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="flex min-h-screen">
             <aside className="sticky top-0 flex h-screen w-[220px] shrink-0 flex-col border-r border-line bg-surface">
                 <Link href="/" className="flex items-center gap-2.5 border-b border-line-2 px-4 py-3.5">
-                    <Image src="/mark.png" alt="" width={28} height={28} className="rounded-md" priority />
+                    <Image src="/mark.png" alt="" width={28} height={28} className="rounded-md" priority unoptimized />
                     <div className="leading-tight">
                         <div className="text-[13px] font-semibold text-ink">Gallant SMS</div>
                         <div className="text-[10.5px] font-medium uppercase tracking-[0.1em] text-ink-4">Admin</div>

@@ -66,7 +66,7 @@ export default async function Messages({ searchParams }: { searchParams: Promise
                             <tr key={m.id} className="hover:bg-surface-2/60">
                                 <Td className="whitespace-nowrap"><Link href={`/messages/${m.id}`} className="text-brand hover:underline">{when(m.createdAt)}</Link></Td>
                                 <Td mono>{m.phoneNumber}{m.isTest ? <div><Badge>sandbox</Badge></div> : null}</Td>
-                                <Td className="max-w-md"><span className="text-xs">{truncate(m.message, 110)}</span></Td>
+                                <Td className="max-w-md [overflow-wrap:anywhere]"><span className="text-xs">{truncate(m.message, 110)}</span></Td>
                                 <Td><Link href={`/users/${m.userId}`} className="text-brand hover:underline">{m.owner_name}</Link></Td>
                                 <Td><StatusBadge status={m.deliveryStatus} />{m.reason && <div className="mt-0.5 max-w-[12rem] truncate text-[11px] text-ink-3" title={m.reason}>{m.reason}</div>}</Td>
                                 <Td><VerdictBadge verdict={m.review_verdict} isHuman={m.review_is_human} reviewer={m.review_reviewer} confidence={m.review_confidence} /></Td>

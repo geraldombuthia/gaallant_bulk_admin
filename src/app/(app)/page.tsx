@@ -64,7 +64,7 @@ export default async function Overview() {
                                     <Td mono>{h.ip_address}</Td>
                                     <Td>{h.n}</Td>
                                     <Td>{h.identifiers}</Td>
-                                    <Td>{ago(h.last)}</Td>
+                                    <Td className="whitespace-nowrap">{ago(h.last)}</Td>
                                 </tr>
                             ))}
                         </Table>

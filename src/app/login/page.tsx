@@ -9,7 +9,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <main className="flex min-h-screen items-center justify-center px-4">
             <div className="w-full max-w-sm">
                 <div className="mb-6 flex items-center gap-3">
-                    <Image src="/mark.png" alt="Gallant" width={40} height={40} className="rounded-lg" priority />
+                    <Image src="/mark.png" alt="Gallant" width={40} height={40} className="rounded-lg" priority unoptimized />
                     <div>
                         <div className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-4">Gallant SMS</div>
                         <h1 className="text-xl font-semibold leading-tight tracking-[-0.01em] text-ink">Admin console</h1>

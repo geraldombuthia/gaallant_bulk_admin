@@ -17,7 +17,7 @@ export default async function SignIns({ searchParams }: { searchParams: Promise<
             {hotspots.length > 0 && (
                 <Card title="Addresses with repeated failures · 24h" className="mb-4">
                     <Table head={["Address", "Failures", "Accounts tried", "Last attempt"]}>
-                        {hotspots.map((h) => <tr key={h.ip_address}><Td mono>{h.ip_address}</Td><Td>{h.n}</Td><Td>{h.identifiers}</Td><Td>{ago(h.last)}</Td></tr>)}
+                        {hotspots.map((h) => <tr key={h.ip_address}><Td mono>{h.ip_address}</Td><Td>{h.n}</Td><Td>{h.identifiers}</Td><Td className="whitespace-nowrap">{ago(h.last)}</Td></tr>)}
                     </Table>
                 </Card>
             )}

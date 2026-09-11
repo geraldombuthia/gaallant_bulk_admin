@@ -131,7 +131,7 @@ export function Filters({ children, reset }: { children: ReactNode; reset: strin
             {children}
             <div className="ml-auto flex items-center gap-2">
                 <Link href={reset} className="px-2 py-1.5 text-xs text-ink-3 hover:text-ink">Reset</Link>
-                <button type="submit" className="rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-strong">Apply</button>
+                <button type="submit" className="rounded-md bg-brand-fill px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-fill-hover">Apply</button>
             </div>
         </form>
     );
@@ -148,9 +148,9 @@ export const inputCls = "rounded-md border border-line bg-surface px-2.5 py-1.5 
 
 /* ---------- buttons: brand once per screen, the rest neutral ---------- */
 const btn = {
-    primary: "bg-brand text-white hover:bg-brand-strong",
-    danger: "bg-danger text-white hover:opacity-90",
-    warn: "bg-warn text-white hover:opacity-90",
+    primary: "bg-brand-fill text-white hover:bg-brand-fill-hover",
+    danger: "bg-danger-fill text-white hover:opacity-90",
+    warn: "bg-warn-fill text-white hover:opacity-90",
     ghost: "border border-line bg-surface text-ink-2 hover:border-ink-4 hover:text-ink",
 } as const;
 export function Button({ kind = "ghost", children, ...rest }: { kind?: keyof typeof btn; children: ReactNode } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
