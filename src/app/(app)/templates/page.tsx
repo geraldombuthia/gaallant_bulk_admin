@@ -34,14 +34,14 @@ export default async function Templates({ searchParams }: { searchParams: Promis
         <>
             <PageHeader title="Templates" subtitle="Every message through the transactional route is one of these. Review is the control." />
 
-            <div className="mb-3 flex flex-wrap gap-1">
+            <div className="mb-3 flex flex-wrap gap-1 rounded-lg border border-line bg-surface p-1">
                 {tabs.map(([s, label, n]) => (
                     <Link key={s} href={`/templates?status=${s}`}
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${!human && status === s ? "bg-ink text-white" : "bg-white text-ink-2 border border-line hover:bg-gray-50"}`}>
+                        className={`rounded-md px-3 py-1 text-xs font-semibold ${!human && status === s ? "bg-brand-soft text-brand-strong" : "text-ink-2 hover:bg-surface-2"}`}>
                         {label} <span className="tnum opacity-70">{n}</span>
                     </Link>
                 ))}
-                <Link href="/templates?human=1" className={`rounded-full px-3 py-1 text-xs font-semibold ${human ? "bg-amber-600 text-white" : "border border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100"}`}>
+                <Link href="/templates?human=1" className={`ml-auto rounded-md px-3 py-1 text-xs font-semibold ${human ? "bg-warn-soft text-warn ring-1 ring-warn/40" : "text-warn hover:bg-warn-soft"}`}>
                     Human review requested <span className="tnum opacity-70">{humanOpen}</span>
                 </Link>
             </div>
@@ -64,7 +64,7 @@ export default async function Templates({ searchParams }: { searchParams: Promis
                             const flags = review(t.msg_content);
                             const w = worst(flags);
                             return (
-                                <tr key={t.id} className="hover:bg-gray-50/60">
+                                <tr key={t.id} className="hover:bg-surface-2/60">
                                     <Td>
                                         <Link href={`/templates/${t.id}`} className="font-medium text-brand hover:underline">{t.template_name}</Link>
                                         <span className="ml-2 font-mono text-[11px] text-ink-3">{t.slug}</span>
@@ -75,7 +75,7 @@ export default async function Templates({ searchParams }: { searchParams: Promis
                                     <Td><div>{t.owner_name}</div><div className="text-xs text-ink-3">{t.owner_email}</div></Td>
                                     <Td><StatusBadge status={t.status} />{!t.active && <div className="mt-1 text-[11px] text-ink-3">inactive</div>}</Td>
                                     <Td>
-                                        {w === "clean" ? <span className="text-xs text-emerald-700">no flags</span> : (
+                                        {w === "clean" ? <span className="text-xs text-ok">no flags</span> : (
                                             <div className="flex flex-wrap gap-1">
                                                 {flags.slice(0, 3).map((f) => <Badge key={f.id} tone={f.severity === "block" ? "danger" : f.severity === "warn" ? "warn" : "neutral"} title={f.detail}>{f.title.split(":")[0]}</Badge>)}
                                                 {flags.length > 3 && <span className="text-[11px] text-ink-3">+{flags.length - 3}</span>}

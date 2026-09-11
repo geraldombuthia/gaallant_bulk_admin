@@ -29,9 +29,9 @@ export function ReviewForm({ id, flags }: { id: number; flags: Flag[] }) {
             <input type="hidden" name="decision" value={decision} />
 
             <div className="grid grid-cols-3 gap-1 rounded border border-line p-1 text-xs font-semibold">
-                {([["approve", "Approve", "text-emerald-800 bg-emerald-50"], ["changes", "Request changes", "text-amber-800 bg-amber-50"], ["reject", "Reject", "text-red-800 bg-red-50"]] as const).map(([d, label, cls]) => (
+                {([["approve", "Approve", "text-ok bg-ok-soft"], ["changes", "Request changes", "text-warn bg-warn-soft"], ["reject", "Reject", "text-danger bg-danger-soft"]] as const).map(([d, label, cls]) => (
                     <button key={d} type="button" onClick={() => setDecision(d)}
-                        className={`rounded px-2 py-1.5 ${decision === d ? cls : "text-ink-3 hover:bg-gray-50"}`}>{label}</button>
+                        className={`rounded px-2 py-1.5 ${decision === d ? cls : "text-ink-3 hover:bg-surface-2"}`}>{label}</button>
                 ))}
             </div>
 
@@ -47,7 +47,7 @@ export function ReviewForm({ id, flags }: { id: number; flags: Flag[] }) {
                         Message to the owner
                         <textarea name="note" value={note} onChange={(e) => setNote(e.target.value)} rows={7} required minLength={10}
                             placeholder={decision === "changes" ? "What must change, and why. Be specific: name the words or the link." : "Why this cannot go through the transactional route."}
-                            className="mt-1 block w-full rounded border border-line px-3 py-2 text-sm leading-relaxed" />
+                            className="mt-1 block w-full rounded-md border border-line bg-surface px-3 py-2 text-[13px] leading-relaxed focus:border-brand" />
                     </label>
                     {flags.length > 0 && (
                         <div>
@@ -55,12 +55,12 @@ export function ReviewForm({ id, flags }: { id: number; flags: Flag[] }) {
                             <div className="flex flex-wrap gap-1">
                                 {flags.map((f) => (
                                     <button key={f.id} type="button" onClick={() => add(f.suggestion)}
-                                        className="rounded border border-line bg-white px-2 py-1 text-left text-xs text-ink-2 hover:bg-gray-50">
+                                        className="rounded-md border border-line bg-surface px-2 py-1 text-left text-xs text-ink-2 hover:bg-surface-2">
                                         + {f.title.split(":")[0]}
                                     </button>
                                 ))}
                                 <button type="button" onClick={() => add("This sender ID is registered for transactional messages only: confirmations, receipts, one-time codes, alerts and status updates about something the recipient initiated. Marketing, offers and announcements cannot go through it.")}
-                                    className="rounded border border-line bg-white px-2 py-1 text-left text-xs text-ink-2 hover:bg-gray-50">+ Transactional-only policy</button>
+                                    className="rounded-md border border-line bg-surface px-2 py-1 text-left text-xs text-ink-2 hover:bg-surface-2">+ Transactional-only policy</button>
                             </div>
                         </div>
                     )}

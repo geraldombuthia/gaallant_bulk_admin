@@ -28,7 +28,7 @@ export default async function SupportThread({ params }: { params: Promise<{ id: 
                         </div>
                     </Card>
                     {replies.map((r) => (
-                        <Card key={r.id} className={r.authorRole === "admin" ? "border-brand/30 bg-brand-soft/30" : ""}>
+                        <Card key={r.id} className={r.authorRole === "admin" ? "border-brand/30 bg-brand-soft/40" : ""}>
                             <div className="px-4 py-3">
                                 <div className="mb-1 text-xs text-ink-3">{r.authorRole === "admin" ? `${r.author_name} (Gallant)` : r.author_name} · {when(r.created_at)}</div>
                                 <p className="whitespace-pre-wrap text-sm">{r.body}</p>

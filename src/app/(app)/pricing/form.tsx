@@ -5,7 +5,7 @@ import { savePricing, type PricingState } from "./actions";
 import { Button, Notice } from "@/components/ui";
 import type { PricingRow } from "@/lib/db/types";
 
-const input = "mt-1 block w-full rounded border border-line px-2 py-1.5 text-sm tnum";
+const input = "mt-1 block w-full rounded-md border border-line bg-surface px-2 py-1.5 text-[13px] tnum focus:border-brand";
 const label = "block text-[11px] font-semibold uppercase tracking-wider text-ink-3";
 
 export function PricingForm({ current }: { current: PricingRow | null }) {

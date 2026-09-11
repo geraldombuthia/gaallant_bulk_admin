@@ -30,7 +30,7 @@ export default async function Payments({ searchParams }: { searchParams: Promise
                 {rows.length === 0 ? <Empty>No payments match.</Empty> : (
                     <Table head={["When", "Account", "Amount", "Method", "M-Pesa code", "Phone", "Status", "Type"]}>
                         {rows.map((p) => (
-                            <tr key={p.id} className="hover:bg-gray-50/60">
+                            <tr key={p.id} className="hover:bg-surface-2/60">
                                 <Td className="whitespace-nowrap text-xs">{when(p.created_at)}</Td>
                                 <Td><Link href={`/users/${p.userId}`} className="text-brand hover:underline">{p.owner_name}</Link><div className="text-xs text-ink-3">{p.owner_email}</div></Td>
                                 <Td className="text-right font-medium">{kes(p.amount)}</Td>

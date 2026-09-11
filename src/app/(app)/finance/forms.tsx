@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { recordExpense, type S } from "./actions";
 import { Button, Notice } from "@/components/ui";
 
-const input = "mt-1 block w-full rounded border border-line px-2.5 py-1.5 text-sm";
+const input = "mt-1 block w-full rounded-md border border-line bg-surface px-2.5 py-1.5 text-[13px] focus:border-brand";
 const label = "block text-xs font-semibold text-ink-2";
 
 export function ExpenseForm({ categories }: { categories: string[] }) {

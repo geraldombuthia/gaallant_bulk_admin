@@ -2,7 +2,7 @@
  * Small, dependency-free charts. Bars for counts, a line for a series.
  * Drawn to one scale with labelled ends; hover titles carry the value.
  */
-export function Bars({ points, height = 90, color = "var(--brand)", failedColor = "#b3261e", label }: {
+export function Bars({ points, height = 90, color = "var(--brand)", failedColor = "var(--danger)", label }: {
     points: { t: string; sent: number; failed?: number }[]; height?: number; color?: string; failedColor?: string; label: string;
 }) {
     const max = Math.max(1, ...points.map((p) => p.sent));

@@ -27,7 +27,7 @@ export default async function Usage() {
             <PageHeader title="Usage & runway" subtitle="How much is going out, where it is heading, and whether the gateway can carry it." />
 
             {/* ---- runway ---- */}
-            <Card className={`mb-4 ${lvl === "critical" ? "border-red-300" : lvl === "warn" ? "border-amber-300" : ""}`}
+            <Card className={`mb-4 ${lvl === "critical" ? "border-danger/30" : lvl === "warn" ? "border-warn/30" : ""}`}
                 title={<>Gateway runway {lvl === "ok" && <Badge tone="success">healthy</Badge>}{lvl === "warn" && <Badge tone="warn">low</Badge>}{lvl === "critical" && <Badge tone="danger">critical</Badge>}{lvl === "unknown" && <Badge>balance unknown</Badge>}</>}
                 action={<div className="flex gap-2"><form action={pollNow}><Button type="submit">Poll balance now</Button></form><form action={checkNow}><Button type="submit" kind="warn">Run alert check</Button></form></div>}>
                 <div className="grid gap-3 px-4 py-3 md:grid-cols-5">
@@ -37,8 +37,8 @@ export default async function Usage() {
                     <Stat label="Customer-held units" value={num(runway.committedUnits)} sub={runway.coverage == null ? "paid for, not yet sent" : `gateway covers ${pct(Math.min(runway.coverage, 9.99))}`} tone={runway.coverage != null && runway.coverage < 1 ? "danger" : undefined} />
                     <Stat label="Projected · next 30d" value={num(Math.round(runway.projectedNext30))} sub="messages" />
                 </div>
-                {runway.gatewayError && <p className="border-t border-line px-4 py-2 text-xs text-red-800">Last poll failed: {runway.gatewayError}</p>}
-                {runway.reasons.length > 0 && <ul className="border-t border-line px-4 py-2 text-sm text-amber-900">{runway.reasons.map((r) => <li key={r}>• {r}</li>)}</ul>}
+                {runway.gatewayError && <p className="border-t border-line px-4 py-2 text-xs text-danger">Last poll failed: {runway.gatewayError}</p>}
+                {runway.reasons.length > 0 && <ul className="border-t border-line px-4 py-2 text-sm text-warn">{runway.reasons.map((r) => <li key={r}>• {r}</li>)}</ul>}
                 {balHist.length > 1 && <div className="border-t border-line px-4 py-3"><div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-3">Gateway balance · daily low</div><Line points={balHist.map((b) => ({ t: b.t, v: Number(b.units) }))} label="Gateway balance over time" /></div>}
             </Card>
 
@@ -81,7 +81,7 @@ export default async function Usage() {
             <Card title="Accounts per day · last 60d" className="mt-4">
                 <div className="grid gap-4 px-4 py-3 md:grid-cols-3">
                     <div><div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-3">Sign-ups</div><Bars points={users.map((u) => ({ t: u.t, sent: u.signups }))} height={60} label="Sign-ups per day" /><div className="mt-1 text-xs text-ink-3">projected next 30d: <b className="tnum text-ink">{num(Math.round(pu.next30))}</b></div></div>
-                    <div><div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-3">First payment</div><Bars points={users.map((u) => ({ t: u.t, sent: u.paid }))} height={60} color="#1b7a3d" label="Accounts making their first payment per day" /></div>
+                    <div><div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-3">First payment</div><Bars points={users.map((u) => ({ t: u.t, sent: u.paid }))} height={60} color="var(--ok)" label="Accounts making their first payment per day" /></div>
                     <div><div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-3">Active senders</div><Bars points={users.map((u) => ({ t: u.t, sent: u.active }))} height={60} label="Distinct accounts sending per day" /></div>
                 </div>
             </Card>
@@ -101,7 +101,7 @@ export default async function Usage() {
                                         <Td mono>{p.reference ?? "—"}</Td>
                                         <Td className="max-w-xs text-xs">{p.note ?? ""}</Td>
                                         <Td className="text-xs text-ink-3">{p.admin_name}</Td>
-                                        <Td><form action={removePurchase}><input type="hidden" name="id" value={p.id} /><button className="text-xs text-red-700 hover:underline">delete</button></form></Td>
+                                        <Td><form action={removePurchase}><input type="hidden" name="id" value={p.id} /><button className="text-xs text-danger hover:underline">delete</button></form></Td>
                                     </tr>
                                 ))}
                             </Table>
@@ -114,7 +114,7 @@ export default async function Usage() {
                                 {targets.map((t, i) => {
                                     const a = actuals[i];
                                     const cell = (actual: number, target: number | null, money = false) => target == null ? <span className="text-ink-3">—</span> : (
-                                        <span className={actual >= target ? "text-emerald-700" : t.month < thisMonth ? "text-red-700" : ""}>{money ? kes(actual, 0) : num(actual)} <span className="text-ink-3">/ {money ? kes(target, 0) : num(target)}</span> <span className="text-[11px]">({pct(target > 0 ? actual / target : null)})</span></span>
+                                        <span className={actual >= target ? "text-ok" : t.month < thisMonth ? "text-danger" : ""}>{money ? kes(actual, 0) : num(actual)} <span className="text-ink-3">/ {money ? kes(target, 0) : num(target)}</span> <span className="text-[11px]">({pct(target > 0 ? actual / target : null)})</span></span>
                                     );
                                     return (
                                         <tr key={t.month}>
@@ -139,7 +139,7 @@ export default async function Usage() {
                     <Card title="Scheduling">
                         <div className="px-4 py-3 text-xs text-ink-2">
                             <p>Reminders fire from <code>GET /api/alerts/run</code>. Call it hourly; it polls the gateway only when the snapshot is stale and reminds only when the interval has passed.</p>
-                            <pre className="mt-2 overflow-x-auto rounded bg-gray-50 p-2 text-[11px]">0 * * * * curl -s -H &quot;Authorization: Bearer $REVIEW_API_TOKEN&quot; \{"\n"}  https://ADMIN_HOST/api/alerts/run</pre>
+                            <pre className="mt-2 overflow-x-auto rounded bg-surface-2 p-2 text-[11px]">0 * * * * curl -s -H &quot;Authorization: Bearer $REVIEW_API_TOKEN&quot; \{"\n"}  https://ADMIN_HOST/api/alerts/run</pre>
                             <p className="mt-2">Last alert: {settings.last_alert_at ? `${when(settings.last_alert_at)} (${settings.last_alert_level})` : "never"}.</p>
                         </div>
                     </Card>

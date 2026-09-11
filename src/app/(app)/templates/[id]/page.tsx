@@ -34,7 +34,7 @@ export default async function TemplatePage({ params }: { params: Promise<{ id: s
             />
 
             {request && (
-                <div role="note" className="mb-4 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                <div role="note" className="mb-4 rounded border border-warn/30 bg-warn-soft px-3 py-2 text-sm text-warn">
                     <b>Human review requested</b> by {request.requested_by}{request.confidence != null ? ` (confidence ${Math.round(Number(request.confidence) * 100)}%)` : ""} · {ago(request.created_at)}
                     <p className="mt-1 whitespace-pre-wrap text-xs">{request.reason}</p>
                     <p className="mt-1 text-xs">Your decision below resolves this request.</p>
@@ -44,7 +44,7 @@ export default async function TemplatePage({ params }: { params: Promise<{ id: s
                 <div className="space-y-4">
                     <Card title="Message">
                         <div className="px-4 py-3">
-                            <p className="whitespace-pre-wrap rounded border border-line bg-gray-50 px-3 py-2.5 font-mono text-[13px] leading-relaxed">
+                            <p className="whitespace-pre-wrap rounded border border-line bg-surface-2 px-3 py-2.5 font-mono text-[13px] leading-relaxed">
                                 {parts.map((p, i) => /^\{\{/.test(p)
                                     ? <mark key={i} className="rounded bg-brand-soft px-0.5 text-brand-strong">{p}</mark>
                                     : <span key={i}>{p}</span>)}
@@ -52,7 +52,7 @@ export default async function TemplatePage({ params }: { params: Promise<{ id: s
                             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-3">
                                 <span><b className="tnum text-ink">{seg.characters}</b> characters</span>
                                 <span><b className="tnum text-ink">{seg.segments}</b> segment{seg.segments === 1 ? "" : "s"} · {seg.encoding.toUpperCase()}</span>
-                                <span><b className="tnum text-ink">{vars.length}</b> variable{vars.length === 1 ? "" : "s"}{vars.length > 0 && <>: {vars.map((v) => <code key={v} className="ml-1 rounded bg-gray-100 px-1">{v}</code>)}</>}</span>
+                                <span><b className="tnum text-ink">{vars.length}</b> variable{vars.length === 1 ? "" : "s"}{vars.length > 0 && <>: {vars.map((v) => <code key={v} className="ml-1 rounded bg-surface-3 px-1">{v}</code>)}</>}</span>
                             </div>
                         </div>
                     </Card>

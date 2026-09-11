@@ -15,9 +15,9 @@ export default async function Support({ searchParams }: { searchParams: Promise<
     return (
         <>
             <PageHeader title="Support" subtitle="Requests from the dashboard. Replies land in the user's notifications." />
-            <div className="mb-3 flex flex-wrap gap-1">
+            <div className="mb-3 flex flex-wrap gap-1 rounded-lg border border-line bg-surface p-1">
                 {([["open", "Open", counts.open], ["answered", "Answered", counts.answered], ["closed", "Closed", counts.closed], ["all", "All", counts.open + counts.answered + counts.closed]] as const).map(([s, l, n]) => (
-                    <Link key={s} href={`/support?status=${s}`} className={`rounded-full px-3 py-1 text-xs font-semibold ${status === s ? "bg-ink text-white" : "border border-line bg-white text-ink-2 hover:bg-gray-50"}`}>{l} <span className="tnum opacity-70">{n}</span></Link>
+                    <Link key={s} href={`/support?status=${s}`} className={`rounded-md px-3 py-1 text-xs font-semibold ${status === s ? "bg-brand-soft text-brand-strong" : "text-ink-2 hover:bg-surface-2"}`}>{l} <span className="tnum opacity-70">{n}</span></Link>
                 ))}
             </div>
             <Filters reset={`/support?status=${status}`}>
@@ -28,7 +28,7 @@ export default async function Support({ searchParams }: { searchParams: Promise<
                 {rows.length === 0 ? <Empty>Nothing here.</Empty> : (
                     <Table head={["Subject", "From", "Status", "Replies", "Updated"]}>
                         {rows.map((s) => (
-                            <tr key={s.id} className="hover:bg-gray-50/60">
+                            <tr key={s.id} className="hover:bg-surface-2/60">
                                 <Td><Link href={`/support/${s.id}`} className="font-medium text-brand hover:underline">{s.subject}</Link>{s.priority === "high" && <Badge tone="danger">high</Badge>}<div className="max-w-lg text-xs text-ink-3">{truncate(s.body, 110)}</div></Td>
                                 <Td><Link href={`/users/${s.userId}`} className="text-brand hover:underline">{s.owner_name}</Link><div className="text-xs text-ink-3">{s.owner_email}</div></Td>
                                 <Td><StatusBadge status={s.status} /></Td>

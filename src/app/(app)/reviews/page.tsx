@@ -37,7 +37,7 @@ export default async function Reviews({ searchParams }: { searchParams: Promise<
                                     {r.status === "open" && (
                                         <form action={closeRequest} className="flex flex-col gap-1">
                                             <input type="hidden" name="id" value={r.id} />
-                                            <input name="resolution" placeholder="note (optional)" className="rounded border border-line px-1.5 py-1 text-xs" />
+                                            <input name="resolution" placeholder="note (optional)" className="rounded-md border border-line bg-surface px-1.5 py-1 text-xs" />
                                             <div className="flex gap-1">
                                                 <Button type="submit" name="status" value="resolved" kind="primary">Resolved</Button>
                                                 <Button type="submit" name="status" value="dismissed">Dismiss</Button>

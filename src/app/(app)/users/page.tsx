@@ -28,7 +28,7 @@ export default async function Users({ searchParams }: { searchParams: Promise<SP
                 {rows.length === 0 ? <Empty>No accounts match.</Empty> : (
                     <Table head={["Account", "Role", "Status", "Balance", "Sent · 30d", "Keys", "Last sign-in", "Joined"]}>
                         {rows.map((u) => (
-                            <tr key={u.id} className="hover:bg-gray-50/60">
+                            <tr key={u.id} className="hover:bg-surface-2/60">
                                 <Td><Link href={`/users/${u.id}`} className="font-medium text-brand hover:underline">{u.name}</Link><div className="text-xs text-ink-3">{u.email}{u.phone ? ` · ${u.phone}` : ""}</div></Td>
                                 <Td>{u.role === "user" ? <span className="text-xs text-ink-3">user</span> : <Badge tone="info">{u.role}</Badge>}</Td>
                                 <Td><StatusBadge status={u.statuc} />{!u.registered_at && <div className="mt-0.5 text-[11px] text-ink-3">unpaid</div>}</Td>

@@ -21,7 +21,7 @@ export default async function Messages({ searchParams }: { searchParams: Promise
     return (
         <>
             <PageHeader title="Messages" subtitle="Every SMS through the platform, live and sandbox."
-                action={<Link href={`/messages/export?${qs}`} className="rounded border border-line bg-white px-3 py-1.5 text-xs font-semibold hover:bg-gray-50">Export CSV (current filter)</Link>} />
+                action={<Link href={`/messages/export?${qs}`} className="rounded border border-line bg-surface px-3 py-1.5 text-xs font-semibold hover:bg-surface-2">Export CSV (current filter)</Link>} />
 
             <Filters reset="/messages">
                 <Field label="Search"><input name="q" defaultValue={sp.q} placeholder="phone, content, transaction id" className={`${inputCls} w-56`} /></Field>
@@ -63,7 +63,7 @@ export default async function Messages({ searchParams }: { searchParams: Promise
                 {rows.length === 0 ? <Empty>No messages match.</Empty> : (
                     <Table head={["Sent", "To", "Message", "Account", "Status", "Review", "Report", "Cost"]}>
                         {rows.map((m) => (
-                            <tr key={m.id} className="hover:bg-gray-50/60">
+                            <tr key={m.id} className="hover:bg-surface-2/60">
                                 <Td className="whitespace-nowrap"><Link href={`/messages/${m.id}`} className="text-brand hover:underline">{when(m.createdAt)}</Link></Td>
                                 <Td mono>{m.phoneNumber}{m.isTest ? <div><Badge>sandbox</Badge></div> : null}</Td>
                                 <Td className="max-w-md"><span className="text-xs">{truncate(m.message, 110)}</span></Td>

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { overview, failureHotspots } from "@/lib/db/misc";
 import { listTemplates } from "@/lib/db/templates";
 import { listSupport } from "@/lib/db/support";
-import { Card, Stat, Table, Td, StatusBadge, Empty, PageHeader } from "@/components/ui";
+import { Card, Stat, Table, Td, StatusBadge, Empty, PageHeader, Badge } from "@/components/ui";
 import { kes, num, pct, ago, truncate } from "@/lib/format";
 import { review, worst } from "@/lib/compliance";
 
@@ -20,7 +20,7 @@ export default async function Overview() {
 
     return (
         <>
-            <PageHeader title="Overview" subtitle="Live traffic, money and what needs a decision." />
+            <PageHeader title="Overview" subtitle="Live traffic, money, and what needs a decision today." />
 
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
                 <Stat label="Messages today" value={num(o.messages.today)} sub={`${num(o.messages.d7)} this week`} />
@@ -43,15 +43,15 @@ export default async function Overview() {
                                 return (
                                     <g key={d.day}>
                                         <rect x={i * 22 + 3} y={55 - h} width={16} height={h} fill="var(--brand)" opacity="0.85"><title>{d.day}: {d.sent} sent, {d.failed} failed</title></rect>
-                                        {fh > 0 && <rect x={i * 22 + 3} y={55 - fh} width={16} height={fh} fill="#b3261e" />}
+                                        {fh > 0 && <rect x={i * 22 + 3} y={55 - fh} width={16} height={fh} fill="var(--danger)" />}
                                     </g>
                                 );
                             })}
                         </svg>
                         <div className="mt-1 flex justify-between text-[11px] text-ink-3">
-                            <span>{o.daily[0]?.day ?? ""}</span>
-                            <span>live traffic only · red = failed · outstanding credits {num(o.creditsOutstanding)}</span>
-                            <span>{o.daily.at(-1)?.day ?? ""}</span>
+                            <span className="tnum">{o.daily[0]?.day ?? ""}</span>
+                            <span><span className="inline-block h-2 w-2 rounded-sm bg-brand align-middle" /> sent <span className="ml-2 inline-block h-2 w-2 rounded-sm bg-danger align-middle" /> failed · live only · {num(o.creditsOutstanding)} credits outstanding</span>
+                            <span className="tnum">{o.daily.at(-1)?.day ?? ""}</span>
                         </div>
                     </div>
                 </Card>
@@ -82,7 +82,7 @@ export default async function Overview() {
                                     <tr key={t.id}>
                                         <Td><Link href={`/templates/${t.id}`} className="font-medium text-brand hover:underline">{t.template_name}</Link><div className="text-xs text-ink-3">{truncate(t.msg_content, 70)}</div></Td>
                                         <Td>{t.owner_name}</Td>
-                                        <Td>{w === "clean" ? <span className="text-xs text-emerald-700">clean</span> : <StatusBadge status={w === "block" ? "failed" : w === "warn" ? "pending" : "sent"} />}</Td>
+                                        <Td>{w === "clean" ? <Badge tone="success">clean</Badge> : <Badge tone={w === "block" ? "danger" : w === "warn" ? "warn" : "neutral"}>{w}</Badge>}</Td>
                                         <Td>{ago(t.createdAt)}</Td>
                                     </tr>
                                 );

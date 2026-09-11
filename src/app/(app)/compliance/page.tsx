@@ -48,7 +48,7 @@ export default async function Compliance({ searchParams }: { searchParams: Promi
                                 <Td className="max-w-md text-xs"><Link href={`/messages/${a.sample.id}`} className="text-ink-2 hover:text-brand">{truncate(a.sample.message, 100)}</Link></Td>
                                 <Td>
                                     <div className="flex flex-col gap-1">
-                                        {warnings[i] > 0 && <span className="text-[11px] text-amber-800">{warnings[i]} prior warning{warnings[i] === 1 ? "" : "s"}</span>}
+                                        {warnings[i] > 0 && <span className="text-[11px] text-warn">{warnings[i]} prior warning{warnings[i] === 1 ? "" : "s"}</span>}
                                         <form action={warnAccount} className="flex gap-1">
                                             <input type="hidden" name="userId" value={a.userId} />
                                             <input type="hidden" name="messageIds" value={scan.hits.filter((h) => h.userId === a.userId).slice(0, 10).map((h) => h.id).join(",")} />

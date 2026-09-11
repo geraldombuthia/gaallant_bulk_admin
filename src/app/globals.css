@@ -1,36 +1,128 @@
 @import "tailwindcss";
 
+/* ------------------------------------------------------------------
+   Gallant brand tokens.
+
+   Palette from the logo: orange e85020 is the identity mark, indigo
+   5058a8 the interactive accent, teal 00a890 the "good" hue. Hue is
+   reserved for meaning -- brand for what you can act on, semantic for
+   status -- and everything else is a neutral with a slight indigo bias
+   so the greys read as chosen rather than default.
+
+   Every colour a component uses is a token here, in both themes. To
+   rebrand, change this block.
+   ------------------------------------------------------------------ */
 :root {
-  --brand: #2265b3;
-  --brand-strong: #17497f;
-  --brand-soft: #eaf2fb;
-  --ink: #1a2b3c;
-  --ink-2: #4a5866;
-  --ink-3: #7a8794;
-  --line: #e3e7ea;
-  --page: #f5f7f9;
+  --mark: #e85020;
+  --brand: #5058a8;
+  --brand-strong: #3d4489;
+  --brand-soft: #eceef8;
+  --brand-ring: #9aa0d6;
+
+  --page: #f4f5f9;
+  --surface: #ffffff;
+  --surface-2: #f8f8fb;
+  --surface-3: #eef0f5;
+  --line: #e2e4ee;
+  --line-2: #eceef4;
+
+  --ink: #161a2e;
+  --ink-2: #4b5069;
+  --ink-3: #7c8199;
+  --ink-4: #a3a7ba;
+
+  --ok: #0e8a74;      --ok-soft: #e3f5f0;
+  --warn: #a2650e;    --warn-soft: #fdf1df;
+  --danger: #c2331f;  --danger-soft: #fdeae6;
+  --info: #3d4489;    --info-soft: #eceef8;
+
+  --shadow-1: 0 1px 2px rgb(22 26 46 / 0.06);
+  --shadow-2: 0 4px 12px rgb(22 26 46 / 0.08);
+  --radius: 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --brand: #8b92e0;
+    --brand-strong: #a8aeec;
+    --brand-soft: #23264a;
+    --brand-ring: #5058a8;
+
+    --page: #101220;
+    --surface: #171a2b;
+    --surface-2: #1c1f33;
+    --surface-3: #232741;
+    --line: #2a2e47;
+    --line-2: #22263c;
+
+    --ink: #e8e9f2;
+    --ink-2: #b6b9cc;
+    --ink-3: #8a8ea6;
+    --ink-4: #62667f;
+
+    --ok: #4fd1b5;      --ok-soft: #12332d;
+    --warn: #f0b458;    --warn-soft: #3a2c14;
+    --danger: #f28b7a;  --danger-soft: #3d1c18;
+    --info: #a8aeec;    --info-soft: #23264a;
+
+    --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-2: 0 4px 12px rgb(0 0 0 / 0.5);
+  }
+}
+:root[data-theme="dark"] {
+  --brand: #8b92e0; --brand-strong: #a8aeec; --brand-soft: #23264a; --brand-ring: #5058a8;
+  --page: #101220; --surface: #171a2b; --surface-2: #1c1f33; --surface-3: #232741; --line: #2a2e47; --line-2: #22263c;
+  --ink: #e8e9f2; --ink-2: #b6b9cc; --ink-3: #8a8ea6; --ink-4: #62667f;
+  --ok: #4fd1b5; --ok-soft: #12332d; --warn: #f0b458; --warn-soft: #3a2c14; --danger: #f28b7a; --danger-soft: #3d1c18; --info: #a8aeec; --info-soft: #23264a;
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4); --shadow-2: 0 4px 12px rgb(0 0 0 / 0.5);
 }
 
 @theme inline {
+  --color-mark: var(--mark);
   --color-brand: var(--brand);
   --color-brand-strong: var(--brand-strong);
   --color-brand-soft: var(--brand-soft);
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
   --color-ink-3: var(--ink-3);
-  --color-line: var(--line);
-  --color-page: var(--page);
-  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --color-ink-4: var(--ink-4);
+  --color-ok: var(--ok);         --color-ok-soft: var(--ok-soft);
+  --color-warn: var(--warn);     --color-warn-soft: var(--warn-soft);
+  --color-danger: var(--danger); --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);     --color-info-soft: var(--info-soft);
+  --font-sans: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
 }
 
-html { color-scheme: light; }
-body { background: var(--page); color: var(--ink); font-family: var(--font-sans); font-size: 14px; }
+html { color-scheme: light dark; }
+body {
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
 
-/* tabular digits everywhere numbers line up */
+/* Digits line up wherever they sit in a column */
 td, .tnum { font-variant-numeric: tabular-nums; }
 
-/* focus that is visible without being loud */
-:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+/* Focus that is visible in both themes without being loud */
+:focus-visible { outline: 2px solid var(--brand-ring); outline-offset: 2px; border-radius: 4px; }
 
-textarea, input, select { font: inherit; }
+textarea, input, select { font: inherit; color: var(--ink); background: var(--surface); }
+input::placeholder, textarea::placeholder { color: var(--ink-4); }
+select option { color: var(--ink); background: var(--surface); }
+
+::selection { background: var(--brand-soft); }
+
+/* Scrollbars follow the surface, not the OS default white */
+* { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }

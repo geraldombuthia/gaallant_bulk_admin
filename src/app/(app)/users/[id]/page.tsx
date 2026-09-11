@@ -74,7 +74,7 @@ export default async function UserPage({ params }: { params: Promise<{ id: strin
                         <Card title="Credit ledger">
                             {ledger.length === 0 ? <Empty>None.</Empty> : (
                                 <Table head={["When", "SMS units", "Paid", "Type", "Unit price"]}>
-                                    {ledger.map((l) => <tr key={l.id}><Td className="whitespace-nowrap text-xs">{when(l.createdAt)}</Td><Td className={`text-right ${Number(l.creditUnit) < 0 ? "text-red-700" : ""}`}>{Number(l.creditUnit) > 0 ? "+" : ""}{num(l.creditUnit)}</Td><Td className="text-right">{Number(l.creditsValue) > 0 ? kes(l.creditsValue) : <span className="text-ink-3">—</span>}</Td><Td className="text-xs">{l.productType}</Td><Td className="text-right text-xs">{Number(l.price_per_unit) > 0 ? kes(l.price_per_unit) : "—"}</Td></tr>)}
+                                    {ledger.map((l) => <tr key={l.id}><Td className="whitespace-nowrap text-xs">{when(l.createdAt)}</Td><Td className={`text-right ${Number(l.creditUnit) < 0 ? "text-danger" : ""}`}>{Number(l.creditUnit) > 0 ? "+" : ""}{num(l.creditUnit)}</Td><Td className="text-right">{Number(l.creditsValue) > 0 ? kes(l.creditsValue) : <span className="text-ink-3">—</span>}</Td><Td className="text-xs">{l.productType}</Td><Td className="text-right text-xs">{Number(l.price_per_unit) > 0 ? kes(l.price_per_unit) : "—"}</Td></tr>)}
                                 </Table>
                             )}
                         </Card>
@@ -110,5 +110,5 @@ export default async function UserPage({ params }: { params: Promise<{ id: strin
 }
 
 function Mini({ label, value }: { label: string; value: string }) {
-    return <div className="rounded-lg border border-line bg-white px-3 py-2"><div className="text-[11px] font-semibold uppercase tracking-wider text-ink-3">{label}</div><div className="tnum mt-0.5 text-base font-semibold">{value}</div></div>;
+    return <div className="rounded-lg border border-line bg-surface px-3 py-2"><div className="text-[11px] font-semibold uppercase tracking-wider text-ink-3">{label}</div><div className="tnum mt-0.5 text-base font-semibold">{value}</div></div>;
 }

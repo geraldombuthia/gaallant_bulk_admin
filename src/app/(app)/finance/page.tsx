@@ -32,7 +32,7 @@ export default async function Finance() {
                 <Stat label="All time" value={kes(periods.all.amount, 0)} sub={`${periods.all.n} payments`} />
             </div>
             <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-ink-3">
-                <span>Pending M-Pesa (initiated, no callback): <b className={`tnum ${f.cash.pending > 0 ? "text-amber-800" : "text-ink"}`}>{kes(f.cash.pending, 0)}</b></span>
+                <span>Pending M-Pesa (initiated, no callback): <b className={`tnum ${f.cash.pending > 0 ? "text-warn" : "text-ink"}`}>{kes(f.cash.pending, 0)}</b></span>
                 <span>Failed · 30d: <b className="tnum text-ink">{kes(f.cash.failed30, 0)}</b></span>
             </div>
 
@@ -58,7 +58,7 @@ export default async function Finance() {
                             <span className="text-ink-3">− outstanding balances</span><span className="tnum">{num(f.units.outstanding)}</span>
                             <span className="font-medium">= consumed (derived)</span><span className="tnum font-medium">{num(r.consumedDerived)}</span>
                             <span className="text-ink-3">live messages sent (observed)</span><span className="tnum">{num(r.sentObserved)}</span>
-                            <span className={`font-medium ${unitsOk ? "" : "text-red-700"}`}>difference</span><span className={`tnum font-medium ${unitsOk ? "" : "text-red-700"}`}>{r.gap > 0 ? "+" : ""}{num(r.gap)}</span>
+                            <span className={`font-medium ${unitsOk ? "" : "text-danger"}`}>difference</span><span className={`tnum font-medium ${unitsOk ? "" : "text-danger"}`}>{r.gap > 0 ? "+" : ""}{num(r.gap)}</span>
                         </div>
                         <p className="mt-2 text-xs text-ink-3">A small positive difference is normal (multi-segment messages consume more than one unit). A negative one means messages went out that were never billed.</p>
                     </div>
@@ -68,7 +68,7 @@ export default async function Finance() {
                         <div className="grid grid-cols-[1fr_auto] gap-y-1">
                             <span className="text-ink-3">Successful payments (Payments table)</span><span className="tnum">{kes(r.paymentsOk)}</span>
                             <span className="text-ink-3">Top-ups credited (Credits ledger)</span><span className="tnum">{kes(r.ledgerPaid)}</span>
-                            <span className={`font-medium ${cashOk ? "" : "text-red-700"}`}>difference</span><span className={`tnum font-medium ${cashOk ? "" : "text-red-700"}`}>{kes(r.cashGap)}</span>
+                            <span className={`font-medium ${cashOk ? "" : "text-danger"}`}>difference</span><span className={`tnum font-medium ${cashOk ? "" : "text-danger"}`}>{kes(r.cashGap)}</span>
                         </div>
                         <p className="mt-2 text-xs text-ink-3">Every successful payment must have exactly one ledger row. A gap here is a payment that was taken but never credited, or credited twice.</p>
                     </div>
@@ -82,10 +82,10 @@ export default async function Finance() {
                             <tr key={a.id}>
                                 <Td><Link href={`/users/${a.id}`} className="text-brand hover:underline">{a.name}</Link><div className="text-xs text-ink-3">{a.email}</div></Td>
                                 <Td className="text-right">{num(a.unitsIn)}</Td>
-                                <Td className={`text-right ${Number(a.balance) < 0 ? "text-red-700" : ""}`}>{num(a.balance)}</Td>
+                                <Td className={`text-right ${Number(a.balance) < 0 ? "text-danger" : ""}`}>{num(a.balance)}</Td>
                                 <Td className="text-right">{num(a.consumedDerived)}</Td>
                                 <Td className="text-right">{num(a.sent)}</Td>
-                                <Td className="text-right font-medium text-red-700">{Number(a.gap) > 0 ? "+" : ""}{num(a.gap)}</Td>
+                                <Td className="text-right font-medium text-danger">{Number(a.gap) > 0 ? "+" : ""}{num(a.gap)}</Td>
                             </tr>
                         ))}
                     </Table>
@@ -113,7 +113,7 @@ export default async function Finance() {
                                     <Td mono>{e.reference ?? "—"}</Td>
                                     <Td className="max-w-xs text-xs">{e.note ?? ""}</Td>
                                     <Td className="text-xs text-ink-3">{e.admin_name}</Td>
-                                    <Td><form action={removeExpense}><input type="hidden" name="id" value={e.id} /><button className="text-xs text-red-700 hover:underline">delete</button></form></Td>
+                                    <Td><form action={removeExpense}><input type="hidden" name="id" value={e.id} /><button className="text-xs text-danger hover:underline">delete</button></form></Td>
                                 </tr>
                             ))}
                         </Table>
@@ -134,7 +134,7 @@ export default async function Finance() {
                         <tr key={m.m} className={m.cash === 0 && m.live === 0 && m.signups === 0 ? "text-ink-3" : ""}>
                             <Td mono>{m.m}</Td>
                             <Td className="text-right font-medium">{m.cash > 0 ? kes(m.cash, 0) : "—"}</Td>
-                            <Td className="text-right text-red-800">{expByMonth[m.m] ? kes(expByMonth[m.m], 0) : "—"}</Td>
+                            <Td className="text-right text-danger">{expByMonth[m.m] ? kes(expByMonth[m.m], 0) : "—"}</Td>
                             <Td className="text-right">{m.payments || "—"}</Td>
                             <Td className="text-right">{m.units > 0 ? num(m.units) : "—"}</Td>
                             <Td className="text-right">{m.live || "—"}</Td>

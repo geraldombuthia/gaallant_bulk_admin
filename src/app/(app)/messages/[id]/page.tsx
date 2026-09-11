@@ -29,7 +29,7 @@ export default async function MessagePage({ params }: { params: Promise<{ id: st
             <PageHeader title={`Message #${m.id}`} subtitle={<>to <span className="font-mono">{m.phoneNumber}</span> · {when(m.createdAt)}</>}
                 action={<div className="flex gap-2">{m.isTest ? <Badge>sandbox</Badge> : null}<StatusBadge status={m.deliveryStatus} /></div>} />
             {request && (
-                <div role="note" className="mb-4 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                <div role="note" className="mb-4 rounded border border-warn/30 bg-warn-soft px-3 py-2 text-sm text-warn">
                     <b>Human review requested</b> by {request.requested_by} · <span className="whitespace-pre-wrap text-xs">{request.reason}</span>
                 </div>
             )}
@@ -39,7 +39,7 @@ export default async function MessagePage({ params }: { params: Promise<{ id: st
                         {flags.length > 0 && <div className="mb-2 flex flex-wrap gap-1">{flags.map((f) => <Badge key={f.id} tone={f.severity === "block" ? "danger" : f.severity === "warn" ? "warn" : "neutral"} title={f.detail}>{f.id}</Badge>)}</div>}
                         <form action={confirmVerdict} className="flex flex-wrap items-end gap-2">
                             <input type="hidden" name="id" value={m.id} />
-                            <label className="flex-1 text-xs font-semibold text-ink-2">Note (optional)<input name="note" className="mt-1 block w-full rounded border border-line px-2 py-1 text-sm" /></label>
+                            <label className="flex-1 text-xs font-semibold text-ink-2">Note (optional)<input name="note" className="mt-1 block w-full rounded-md border border-line bg-surface px-2 py-1 text-[13px] focus:border-brand" /></label>
                             <Button type="submit" name="verdict" value="clean" kind="primary">Confirm clean</Button>
                             <Button type="submit" name="verdict" value="marketing" kind="danger">Confirm marketing</Button>
                         </form>
@@ -50,7 +50,7 @@ export default async function MessagePage({ params }: { params: Promise<{ id: st
                 <Card title={<>Enforcement {warnings > 0 && <Badge tone="warn">{warnings} prior warning{warnings === 1 ? "" : "s"}</Badge>}</>}>
                     <form action={warnFromMessage} className="space-y-2 px-4 py-3">
                         <input type="hidden" name="id" value={m.id} /><input type="hidden" name="userId" value={m.userId} />
-                        <label className="block text-xs font-semibold text-ink-2">Warn the account<textarea name="reason" required minLength={10} rows={3} className="mt-1 block w-full rounded border border-line px-2 py-1 text-sm" placeholder="What was wrong with this message. The user reads this." /></label>
+                        <label className="block text-xs font-semibold text-ink-2">Warn the account<textarea name="reason" required minLength={10} rows={3} className="mt-1 block w-full rounded-md border border-line bg-surface px-2 py-1 text-[13px] focus:border-brand" placeholder="What was wrong with this message. The user reads this." /></label>
                         <div className="flex items-center justify-between"><Button type="submit" kind="warn">Send warning</Button><Link href={`/users/${m.userId}`} className="text-xs text-brand">Suspend from the account page →</Link></div>
                     </form>
                 </Card>

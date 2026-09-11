@@ -12,7 +12,7 @@ export default async function Email() {
     return (
         <>
             <PageHeader title="Email" subtitle="Send to one address, one account, or a segment. Every message is logged before it is sent." />
-            {!configured && <div role="alert" className="mb-4 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">EMAIL_ADDRESS / EMAIL_PASS are not set. Sends will be recorded as failed until they are.</div>}
+            {!configured && <div role="alert" className="mb-4 rounded border border-warn/30 bg-warn-soft px-3 py-2 text-sm text-warn">EMAIL_ADDRESS / EMAIL_PASS are not set. Sends will be recorded as failed until they are.</div>}
             <div className="grid gap-4 xl:grid-cols-[420px_1fr]">
                 <Card title="Compose"><div className="px-4 py-3"><ComposeForm /></div></Card>
                 <Card title="Recent batches">
@@ -26,7 +26,7 @@ export default async function Email() {
                                     <Td className="text-right">{b.total}</Td>
                                     <Td className="text-right"><Badge tone={Number(b.sent) > 0 ? "success" : "neutral"}>{b.sent}</Badge></Td>
                                     <Td className="text-right">{Number(b.failed) > 0 ? <Badge tone="danger">{b.failed}</Badge> : "—"}</Td>
-                                    <Td className="max-w-xs text-xs text-red-800"><span className="block truncate" title={b.sample_error ?? ""}>{b.sample_error ?? ""}</span></Td>
+                                    <Td className="max-w-xs text-xs text-danger"><span className="block truncate" title={b.sample_error ?? ""}>{b.sample_error ?? ""}</span></Td>
                                 </tr>
                             ))}
                         </Table>
