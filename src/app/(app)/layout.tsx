@@ -4,6 +4,7 @@ import { readSession } from "@/lib/auth/session";
 import { countByStatus } from "@/lib/db/templates";
 import { supportCounts } from "@/lib/db/support";
 import { scanSent } from "@/lib/db/compliance";
+import { computeRunway } from "@/lib/alerts";
 import { signOut } from "./actions";
 
 const nav = [
@@ -14,6 +15,7 @@ const nav = [
     { href: "/support", label: "Support", badge: "support" },
     { href: "/payments", label: "Payments" },
     { href: "/finance", label: "Finance" },
+    { href: "/usage", label: "Usage & runway", badge: "runway" },
     { href: "/pricing", label: "Pricing" },
     { href: "/compliance", label: "Compliance", badge: "compliance" },
     { href: "/sign-ins", label: "Sign-ins" },
@@ -25,10 +27,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     if (!session) redirect("/login");
 
     // Queue sizes in the nav, so a reviewer sees work waiting from any page
-    const [templates, support, scan] = await Promise.all([
-        countByStatus(), supportCounts(), scanSent({ sinceDays: 7, minSeverity: "block", limit: 500 }),
+    const [templates, support, scan, runway] = await Promise.all([
+        countByStatus(), supportCounts(), scanSent({ sinceDays: 7, minSeverity: "block", limit: 500 }), computeRunway(),
     ]);
-    const badges: Record<string, number> = { templates: templates.pending, support: support.open, compliance: scan.hits.length };
+    const badges: Record<string, number> = { templates: templates.pending, support: support.open, compliance: scan.hits.length, runway: runway.level === "warn" || runway.level === "critical" ? 1 : 0 };
 
     return (
         <div className="flex min-h-screen">
@@ -55,7 +57,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                     <form action={signOut}><button className="mt-2 text-ink-3 hover:text-ink">Sign out</button></form>
                 </div>
             </aside>
-            <main className="min-w-0 flex-1 px-6 py-5">{children}</main>
+            <main className="min-w-0 flex-1 px-6 py-5">
+                {(runway.level === "warn" || runway.level === "critical") && (
+                    <div role="alert" className={`mb-4 rounded border px-3 py-2 text-sm ${runway.level === "critical" ? "border-red-300 bg-red-50 text-red-900" : "border-amber-300 bg-amber-50 text-amber-900"}`}>
+                        <b>Gateway credits {runway.level === "critical" ? "critically low" : "running low"}.</b> {runway.reasons[0]} <Link href="/usage" className="underline">Usage &amp; runway</Link>
+                    </div>
+                )}
+                {children}
+            </main>
         </div>
     );
 }
