@@ -2,9 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { checkApiToken, apiActorId } from "@/lib/auth/apiToken";
 import { decide } from "@/lib/db/templates";
+import { requestReview } from "@/lib/db/reviewRequests";
 
 /**
- * POST /api/review/decide  { templateId, decision: "approve"|"reject"|"changes", note, reviewer? }
+ * POST /api/review/decide  { templateId, decision: "approve"|"reject"|"changes"|"escalate", note, reviewer?, confidence? }
  *
  * Same transaction as the console: status, owner notification and audit
  * row together. Recorded under REVIEW_API_ACTOR with the note prefixed by
@@ -13,18 +14,25 @@ import { decide } from "@/lib/db/templates";
  */
 const schema = z.object({
     templateId: z.number().int().positive(),
-    decision: z.enum(["approve", "reject", "changes"]),
+    // "escalate" asks a human to decide: it records a review request with
+    // the reason and changes nothing the owner can see
+    decision: z.enum(["approve", "reject", "changes", "escalate"]),
     note: z.string().max(2000).default(""),
     reviewer: z.string().max(60).default("automated reviewer"),
+    confidence: z.number().min(0).max(1).optional(),
 });
 
 export async function POST(req: NextRequest) {
     if (!checkApiToken(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     const parsed = schema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) return NextResponse.json({ error: parsed.error.issues.map((i) => i.message).join("; ") }, { status: 400 });
-    const { templateId, decision, note, reviewer } = parsed.data;
+    const { templateId, decision, note, reviewer, confidence } = parsed.data;
     try {
         const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || null;
+        if (decision === "escalate") {
+            const r = await requestReview({ targetType: "template", targetId: templateId, requested_by: `${reviewer} (API)`, reason: note, confidence: confidence ?? null });
+            return NextResponse.json({ ok: true, templateId, status: "human_review_requested", request_id: r.id, created: r.created });
+        }
         const result = await decide(templateId, decision, note, { id: apiActorId(), name: `${reviewer} (API)` }, ip);
         return NextResponse.json({ ok: true, templateId, status: result.status, owner_id: result.owner });
     } catch (e) {

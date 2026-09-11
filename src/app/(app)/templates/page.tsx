@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { listTemplates, countByStatus } from "@/lib/db/templates";
+import { openCount } from "@/lib/db/reviewRequests";
 import { paging } from "@/lib/db/pool";
 import type { TemplateStatus } from "@/lib/db/types";
 import { Card, Table, Td, StatusBadge, Pager, Filters, Field, inputCls, Empty, PageHeader, Badge } from "@/components/ui";
@@ -9,15 +10,16 @@ import { review, worst } from "@/lib/compliance";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Templates" };
 
-type SP = { status?: string; q?: string; type?: string; page?: string };
+type SP = { status?: string; q?: string; type?: string; page?: string; human?: string };
 
 export default async function Templates({ searchParams }: { searchParams: Promise<SP> }) {
     const sp = await searchParams;
     const status = (sp.status ?? "pending") as TemplateStatus | "all";
     const { page, size, offset } = paging(sp);
-    const [{ rows, total }, counts] = await Promise.all([
-        listTemplates({ status, q: sp.q, type: sp.type as "global" | "private" | undefined }, size, offset),
-        countByStatus(),
+    const human = sp.human === "1";
+    const [{ rows, total }, counts, humanOpen] = await Promise.all([
+        listTemplates({ status: human ? "all" : status, q: sp.q, type: sp.type as "global" | "private" | undefined, humanReview: human }, size, offset),
+        countByStatus(), openCount(),
     ]);
 
     const tabs: [TemplateStatus | "all", string, number][] = [
@@ -35,14 +37,18 @@ export default async function Templates({ searchParams }: { searchParams: Promis
             <div className="mb-3 flex flex-wrap gap-1">
                 {tabs.map(([s, label, n]) => (
                     <Link key={s} href={`/templates?status=${s}`}
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${status === s ? "bg-ink text-white" : "bg-white text-ink-2 border border-line hover:bg-gray-50"}`}>
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${!human && status === s ? "bg-ink text-white" : "bg-white text-ink-2 border border-line hover:bg-gray-50"}`}>
                         {label} <span className="tnum opacity-70">{n}</span>
                     </Link>
                 ))}
+                <Link href="/templates?human=1" className={`rounded-full px-3 py-1 text-xs font-semibold ${human ? "bg-amber-600 text-white" : "border border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100"}`}>
+                    Human review requested <span className="tnum opacity-70">{humanOpen}</span>
+                </Link>
             </div>
 
             <Filters reset={`/templates?status=${status}`}>
                 <input type="hidden" name="status" value={status} />
+                {human && <input type="hidden" name="human" value="1" />}
                 <Field label="Search"><input name="q" defaultValue={sp.q} placeholder="name, slug, content, owner" className={`${inputCls} w-64`} /></Field>
                 <Field label="Type">
                     <select name="type" defaultValue={sp.type ?? ""} className={inputCls}>
@@ -63,6 +69,7 @@ export default async function Templates({ searchParams }: { searchParams: Promis
                                         <Link href={`/templates/${t.id}`} className="font-medium text-brand hover:underline">{t.template_name}</Link>
                                         <span className="ml-2 font-mono text-[11px] text-ink-3">{t.slug}</span>
                                         {t.type === "global" && <Badge tone="info">global</Badge>}
+                                        {Number(t.human_review_open ?? 0) > 0 && <Badge tone="warn">human review</Badge>}
                                         <div className="mt-0.5 max-w-xl text-xs text-ink-2">{truncate(t.msg_content, 120)}</div>
                                     </Td>
                                     <Td><div>{t.owner_name}</div><div className="text-xs text-ink-3">{t.owner_email}</div></Td>
@@ -81,7 +88,7 @@ export default async function Templates({ searchParams }: { searchParams: Promis
                         })}
                     </Table>
                 )}
-                <Pager page={page} size={size} total={total} params={{ status, q: sp.q, type: sp.type }} />
+                <Pager page={page} size={size} total={total} params={{ status, q: sp.q, type: sp.type, human: sp.human }} />
             </Card>
         </>
     );

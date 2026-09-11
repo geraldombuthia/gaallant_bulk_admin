@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTemplate, ownerTemplates, reviewHistory } from "@/lib/db/templates";
 import { getUser } from "@/lib/db/users";
+import { openFor } from "@/lib/db/reviewRequests";
 import { review, segments, worst } from "@/lib/compliance";
 import { Card, Dl, StatusBadge, Badge, PageHeader, Table, Td, Empty, Button } from "@/components/ui";
 import { when, ago, num } from "@/lib/format";
@@ -14,7 +15,7 @@ export default async function TemplatePage({ params }: { params: Promise<{ id: s
     const { id } = await params;
     const t = await getTemplate(Number(id));
     if (!t) notFound();
-    const [owner, siblings, history] = await Promise.all([getUser(t.userId), ownerTemplates(t.userId, t.id), reviewHistory(t.id)]);
+    const [owner, siblings, history, request] = await Promise.all([getUser(t.userId), ownerTemplates(t.userId, t.id), reviewHistory(t.id), openFor("template", t.id)]);
 
     const flags = review(t.msg_content);
     const seg = segments(t.msg_content);
@@ -32,6 +33,13 @@ export default async function TemplatePage({ params }: { params: Promise<{ id: s
                 action={<div className="flex items-center gap-2"><StatusBadge status={t.status} />{!t.active && <Badge>inactive</Badge>}</div>}
             />
 
+            {request && (
+                <div role="note" className="mb-4 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                    <b>Human review requested</b> by {request.requested_by}{request.confidence != null ? ` (confidence ${Math.round(Number(request.confidence) * 100)}%)` : ""} · {ago(request.created_at)}
+                    <p className="mt-1 whitespace-pre-wrap text-xs">{request.reason}</p>
+                    <p className="mt-1 text-xs">Your decision below resolves this request.</p>
+                </div>
+            )}
             <div className="grid gap-4 xl:grid-cols-[1fr_380px]">
                 <div className="space-y-4">
                     <Card title="Message">

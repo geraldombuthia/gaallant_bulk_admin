@@ -81,6 +81,29 @@ export async function financeSummary(gatewayCost: number) {
     };
 }
 
+/** Successful payments in each window, so the same number can be read at every grain */
+export async function cashByPeriod() {
+    const [r] = await query<RowDataPacket & Record<string, string | number>>(
+        `SELECT
+            SUM(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR) THEN amount ELSE 0 END) AS hour,
+            SUM(created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)) AS hourN,
+            SUM(CASE WHEN created_at >= CURDATE() THEN amount ELSE 0 END) AS today,
+            SUM(created_at >= CURDATE()) AS todayN,
+            SUM(CASE WHEN created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY) THEN amount ELSE 0 END) AS d7,
+            SUM(created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)) AS d7N,
+            SUM(CASE WHEN created_at >= DATE_SUB(CURDATE(), INTERVAL 29 DAY) THEN amount ELSE 0 END) AS d30,
+            SUM(created_at >= DATE_SUB(CURDATE(), INTERVAL 29 DAY)) AS d30N,
+            SUM(CASE WHEN created_at >= DATE_FORMAT(CURDATE(), '%Y-01-01') THEN amount ELSE 0 END) AS ytd,
+            SUM(created_at >= DATE_FORMAT(CURDATE(), '%Y-01-01')) AS ytdN,
+            SUM(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 1 YEAR) THEN amount ELSE 0 END) AS y1,
+            SUM(created_at >= DATE_SUB(NOW(), INTERVAL 1 YEAR)) AS y1N,
+            SUM(amount) AS all_time, COUNT(*) AS allN
+         FROM Payments WHERE transaction_status IN ('success','completed')`
+    );
+    const g = (k: string) => ({ amount: R(r[k]), n: R(r[`${k}N`]) });
+    return { hour: g("hour"), today: g("today"), d7: g("d7"), d30: g("d30"), ytd: g("ytd"), y1: g("y1"), all: { amount: R(r.all_time), n: R(r.allN) } };
+}
+
 export async function monthly(months = 12) {
     const cash = await query<RowDataPacket & { m: string; amount: string; n: number }>(
         `SELECT DATE_FORMAT(created_at, '%Y-%m') AS m, SUM(amount) AS amount, COUNT(*) AS n FROM Payments

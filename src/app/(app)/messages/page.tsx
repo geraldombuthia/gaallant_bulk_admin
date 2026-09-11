@@ -3,15 +3,17 @@ import { listMessages, statusBreakdown } from "@/lib/db/messages";
 import { paging } from "@/lib/db/pool";
 import { Card, Table, Td, StatusBadge, Pager, Filters, Field, inputCls, Empty, PageHeader, Badge } from "@/components/ui";
 import { when, truncate } from "@/lib/format";
+import type { ReviewFilter } from "@/lib/db/verdicts";
+import { VerdictBadge } from "@/components/verdict";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Messages" };
 
-type SP = { q?: string; status?: string; mode?: string; user?: string; from?: string; to?: string; dlr?: string; page?: string };
+type SP = { q?: string; status?: string; mode?: string; user?: string; from?: string; to?: string; dlr?: string; review?: string; page?: string };
 
 export default async function Messages({ searchParams }: { searchParams: Promise<SP> }) {
     const sp = await searchParams;
-    const f = { q: sp.q, status: sp.status, mode: sp.mode as "live" | "test" | undefined, user: sp.user, from: sp.from, to: sp.to, dlr: sp.dlr as "received" | "none" | undefined };
+    const f = { q: sp.q, status: sp.status, mode: sp.mode as "live" | "test" | undefined, user: sp.user, from: sp.from, to: sp.to, dlr: sp.dlr as "received" | "none" | undefined, review: (sp.review || undefined) as ReviewFilter | undefined };
     const { page, size, offset } = paging(sp, 50);
     const [{ rows, total }, breakdown] = await Promise.all([listMessages(f, size, offset), statusBreakdown(f)]);
     const qs = new URLSearchParams(Object.entries(sp).filter(([k, v]) => v && k !== "page") as [string, string][]).toString();
@@ -36,6 +38,18 @@ export default async function Messages({ searchParams }: { searchParams: Promise
                 <Field label="Delivery report">
                     <select name="dlr" defaultValue={sp.dlr ?? ""} className={inputCls}><option value="">Any</option><option value="received">Received</option><option value="none">None</option></select>
                 </Field>
+                <Field label="Review">
+                    <select name="review" defaultValue={sp.review ?? ""} className={inputCls}>
+                        <option value="">Any</option>
+                        <option value="unreviewed">Unreviewed</option>
+                        <option value="any_flagged">Flagged (AI or human)</option>
+                        <option value="ai_flagged">AI flagged, unconfirmed</option>
+                        <option value="ai_unsure">AI unsure</option>
+                        <option value="ai_clean">AI clean</option>
+                        <option value="human_flagged">Human confirmed marketing</option>
+                        <option value="human_clean">Human confirmed clean</option>
+                    </select>
+                </Field>
                 <Field label="From"><input type="date" name="from" defaultValue={sp.from} className={inputCls} /></Field>
                 <Field label="To"><input type="date" name="to" defaultValue={sp.to} className={inputCls} /></Field>
             </Filters>
@@ -47,7 +61,7 @@ export default async function Messages({ searchParams }: { searchParams: Promise
 
             <Card>
                 {rows.length === 0 ? <Empty>No messages match.</Empty> : (
-                    <Table head={["Sent", "To", "Message", "Account", "Status", "Report", "Cost"]}>
+                    <Table head={["Sent", "To", "Message", "Account", "Status", "Review", "Report", "Cost"]}>
                         {rows.map((m) => (
                             <tr key={m.id} className="hover:bg-gray-50/60">
                                 <Td className="whitespace-nowrap"><Link href={`/messages/${m.id}`} className="text-brand hover:underline">{when(m.createdAt)}</Link></Td>
@@ -55,6 +69,7 @@ export default async function Messages({ searchParams }: { searchParams: Promise
                                 <Td className="max-w-md"><span className="text-xs">{truncate(m.message, 110)}</span></Td>
                                 <Td><Link href={`/users/${m.userId}`} className="text-brand hover:underline">{m.owner_name}</Link></Td>
                                 <Td><StatusBadge status={m.deliveryStatus} />{m.reason && <div className="mt-0.5 max-w-[12rem] truncate text-[11px] text-ink-3" title={m.reason}>{m.reason}</div>}</Td>
+                                <Td><VerdictBadge verdict={m.review_verdict} isHuman={m.review_is_human} reviewer={m.review_reviewer} confidence={m.review_confidence} /></Td>
                                 <Td className="text-xs">{m.dlrReceivedAt ? <span title={when(m.dlrReceivedAt)}>{m.deliveryCode ?? "—"} {m.deliveryDetail ? <span className="text-ink-3">· {truncate(m.deliveryDetail, 30)}</span> : null}</span> : <span className="text-ink-3">—</span>}</Td>
                                 <Td className="text-right">{m.cost ?? <span className="text-ink-3">—</span>}</Td>
                             </tr>

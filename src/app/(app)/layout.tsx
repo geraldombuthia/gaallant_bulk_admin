@@ -5,14 +5,17 @@ import { countByStatus } from "@/lib/db/templates";
 import { supportCounts } from "@/lib/db/support";
 import { scanSent } from "@/lib/db/compliance";
 import { computeRunway } from "@/lib/alerts";
+import { openCount } from "@/lib/db/reviewRequests";
 import { signOut } from "./actions";
 
 const nav = [
     { href: "/", label: "Overview" },
     { href: "/templates", label: "Templates", badge: "templates" },
+    { href: "/reviews", label: "Human review", badge: "reviews" },
     { href: "/messages", label: "Messages" },
     { href: "/users", label: "Users" },
     { href: "/support", label: "Support", badge: "support" },
+    { href: "/email", label: "Email" },
     { href: "/payments", label: "Payments" },
     { href: "/finance", label: "Finance" },
     { href: "/usage", label: "Usage & runway", badge: "runway" },
@@ -27,10 +30,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     if (!session) redirect("/login");
 
     // Queue sizes in the nav, so a reviewer sees work waiting from any page
-    const [templates, support, scan, runway] = await Promise.all([
-        countByStatus(), supportCounts(), scanSent({ sinceDays: 7, minSeverity: "block", limit: 500 }), computeRunway(),
+    const [templates, support, scan, runway, reviews] = await Promise.all([
+        countByStatus(), supportCounts(), scanSent({ sinceDays: 7, minSeverity: "block", limit: 500 }), computeRunway(), openCount(),
     ]);
-    const badges: Record<string, number> = { templates: templates.pending, support: support.open, compliance: scan.hits.length, runway: runway.level === "warn" || runway.level === "critical" ? 1 : 0 };
+    const badges: Record<string, number> = { templates: templates.pending, support: support.open, compliance: scan.hits.length, runway: runway.level === "warn" || runway.level === "critical" ? 1 : 0, reviews };
 
     return (
         <div className="flex min-h-screen">

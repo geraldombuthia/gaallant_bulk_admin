@@ -4,7 +4,8 @@ import { audit } from "../audit";
 import { notifyUser } from "../notify";
 
 const BASE = `
-    SELECT t.*, u.name AS owner_name, u.email AS owner_email, r.name AS reviewer_name
+    SELECT t.*, u.name AS owner_name, u.email AS owner_email, r.name AS reviewer_name,
+           (SELECT COUNT(*) FROM review_requests rr WHERE rr.targetType = 'template' AND rr.targetId = t.id AND rr.status = 'open') AS human_review_open
     FROM Templates t
     JOIN users u ON u.id = t.userId
     LEFT JOIN users r ON r.id = t.reviewed_by`;
@@ -13,6 +14,8 @@ export interface TemplateFilters {
     status?: TemplateStatus | "all";
     q?: string;
     type?: "global" | "private";
+    /** only templates with an open human-review request */
+    humanReview?: boolean;
 }
 
 export async function listTemplates(f: TemplateFilters, limit: number, offset: number) {
@@ -20,6 +23,7 @@ export async function listTemplates(f: TemplateFilters, limit: number, offset: n
     const params: Params = [];
     if (f.status && f.status !== "all") { where.push("t.status = ?"); params.push(f.status); }
     if (f.type) { where.push("t.type = ?"); params.push(f.type); }
+    if (f.humanReview) where.push("EXISTS (SELECT 1 FROM review_requests r WHERE r.targetType = 'template' AND r.targetId = t.id AND r.status = 'open')");
     if (f.q) {
         where.push("(t.template_name LIKE ? OR t.slug LIKE ? OR t.msg_content LIKE ? OR u.email LIKE ? OR u.name LIKE ?)");
         const like = `%${f.q}%`;
@@ -125,6 +129,9 @@ export async function decide(
             [t.userId, titles[decision], messages[decision], decision === "approve" ? "success" : "warning",
              JSON.stringify({ templateId, slug: t.slug, decision })]
         );
+        // A human decision closes any open request for one
+        await run("UPDATE review_requests SET status = 'resolved', resolved_by = ?, resolution = ?, resolved_at = NOW() WHERE targetType = 'template' AND targetId = ? AND status = 'open'",
+            [admin.id, `Decided: ${status}`, templateId]);
         return { status, owner: t.userId };
     });
 }

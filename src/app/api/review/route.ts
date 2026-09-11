@@ -50,7 +50,13 @@ export async function GET(req: NextRequest) {
             "POST /api/review": "analyse { content } or { contents[] }; kind: template (default) | message",
             "GET  /api/review/queue?status=pending": "templates awaiting review, each with its analysis",
             "GET  /api/review/scan?days=7&min=warn&user=ID": "live messages already sent that read as marketing",
-            "POST /api/review/decide": "{ templateId, decision: approve|reject|changes, note } -- records the decision, notifies the owner, audits it",
+            "POST /api/review/decide": "{ templateId, decision: approve|reject|changes|escalate, note, confidence? } -- escalate asks a human to decide",
+            "POST /api/review/request": "{ targetType: template|message|user, targetId, reason, confidence? } -- ask a human to look at anything",
+            "GET  /api/review/requests?status=open&page=1": "open human-review requests",
+            "GET  /api/review/unreviewed?page=1&limit=200": "sent messages with no verdict yet, oldest first, with analysis -- the AI work queue",
+            "POST /api/review/verdicts": "{ reviewer, verdicts: [{ targetId, verdict: clean|marketing|unsure, confidence?, note? }] } -- up to 500; unsure or low-confidence marketing also asks a human",
+            "GET  /api/review/verdicts?days=30": "counts by review state: unreviewed, ai_clean, ai_flagged, human_clean, human_flagged",
+            "POST /api/review/enforce": "{ userId, action: warn|suspend|request_suspension, reason, message_ids? } -- suspend needs ENFORCE_API_MAY_SUSPEND=1, else becomes a request",
         },
     });
 }

@@ -22,6 +22,7 @@ export interface TemplateRow extends RowDataPacket {
     owner_email?: string;
     reviewer_name?: string | null;
     sent_count?: number;
+    human_review_open?: number;
 }
 
 export interface MessageRow extends RowDataPacket {
@@ -46,6 +47,10 @@ export interface MessageRow extends RowDataPacket {
     createdAt: Date;
     owner_name?: string;
     owner_email?: string;
+    review_verdict?: "clean" | "marketing" | "unsure" | null;
+    review_is_human?: number | null;
+    review_reviewer?: string | null;
+    review_confidence?: string | null;
 }
 
 export interface UserRow extends RowDataPacket {

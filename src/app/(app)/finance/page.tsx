@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { financeSummary, monthly, topAccounts, accountReconciliation } from "@/lib/db/finance";
+import { financeSummary, monthly, topAccounts, accountReconciliation, cashByPeriod } from "@/lib/db/finance";
+import { listExpenses, expenseSummary, expensesMonthly, CATEGORIES } from "@/lib/db/expenses";
+import { ExpenseForm } from "./forms";
+import { removeExpense } from "./actions";
 import { Card, Stat, Table, Td, PageHeader, Empty, Badge } from "@/components/ui";
 import { kes, num, pct, when } from "@/lib/format";
 
@@ -8,7 +11,8 @@ export const metadata = { title: "Finance" };
 
 export default async function Finance() {
     const gatewayCost = Number(process.env.GATEWAY_COST_PER_SMS ?? 0.3);
-    const [f, months, top, recon] = await Promise.all([financeSummary(gatewayCost), monthly(12), topAccounts(), accountReconciliation()]);
+    const [f, months, top, recon, periods, exp, expAll, exp30, expByMonth] = await Promise.all([financeSummary(gatewayCost), monthly(12), topAccounts(), accountReconciliation(), cashByPeriod(), listExpenses({}, 25, 0), expenseSummary(null), expenseSummary(30), expensesMonthly(12)]);
+    const net = f.revenue.recognised - expAll.total;
     const r = f.reconciliation;
     const unitsOk = Math.abs(r.gap) <= Math.max(5, r.sentObserved * 0.05);
     const cashOk = Math.abs(r.cashGap) < 1;
@@ -17,12 +21,19 @@ export default async function Finance() {
         <>
             <PageHeader title="Finance" subtitle="Cash in, revenue earned, and whether the two books agree." />
 
-            <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-3">Cash · what the bank sees</h2>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                <Stat label="Collected · 30d" value={kes(f.cash.ok30, 0)} sub={`${f.cash.okCount30} successful payments`} />
-                <Stat label="Collected · all time" value={kes(f.cash.okAll, 0)} />
-                <Stat label="Pending M-Pesa" value={kes(f.cash.pending, 0)} sub="initiated, no callback yet" tone={f.cash.pending > 0 ? "warn" : undefined} />
-                <Stat label="Failed · 30d" value={kes(f.cash.failed30, 0)} />
+            <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-3">Cash · what the bank sees (successful M-Pesa)</h2>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
+                <Stat label="Last hour" value={kes(periods.hour.amount, 0)} sub={`${periods.hour.n} payment${periods.hour.n === 1 ? "" : "s"}`} />
+                <Stat label="Today" value={kes(periods.today.amount, 0)} sub={`${periods.today.n} payments`} />
+                <Stat label="Last 7 days" value={kes(periods.d7.amount, 0)} sub={`${periods.d7.n} payments`} />
+                <Stat label="Last 30 days" value={kes(periods.d30.amount, 0)} sub={`${periods.d30.n} payments`} />
+                <Stat label="This year" value={kes(periods.ytd.amount, 0)} sub={`${periods.ytd.n} payments`} />
+                <Stat label="Last 12 months" value={kes(periods.y1.amount, 0)} sub={`${periods.y1.n} payments`} />
+                <Stat label="All time" value={kes(periods.all.amount, 0)} sub={`${periods.all.n} payments`} />
+            </div>
+            <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-ink-3">
+                <span>Pending M-Pesa (initiated, no callback): <b className={`tnum ${f.cash.pending > 0 ? "text-amber-800" : "text-ink"}`}>{kes(f.cash.pending, 0)}</b></span>
+                <span>Failed · 30d: <b className="tnum text-ink">{kes(f.cash.failed30, 0)}</b></span>
             </div>
 
             <h2 className="mb-2 mt-5 text-[11px] font-semibold uppercase tracking-wider text-ink-3">Revenue · what has been earned</h2>
@@ -81,12 +92,49 @@ export default async function Finance() {
                 </Card>
             )}
 
+            <h2 className="mb-2 mt-5 text-[11px] font-semibold uppercase tracking-wider text-ink-3">Expenses · what it costs to run</h2>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+                <Stat label="Spend · 30d" value={kes(exp30.total, 0)} sub={`gateway credits ${kes(exp30.gatewayCredits, 0)}`} />
+                <Stat label="Spend · all time" value={kes(expAll.total, 0)} sub={`${Object.keys(expAll.byCat).length} categor${Object.keys(expAll.byCat).length === 1 ? "y" : "ies"} + gateway`} />
+                <Stat label="Marketing · all time" value={kes(expAll.byCat.marketing ?? 0, 0)} />
+                <Stat label="Net · all time" value={kes(net, 0)} sub="recognised revenue − all expenses" tone={net < 0 ? "danger" : undefined} />
+                <Stat label="Cash net · all time" value={kes(periods.all.amount - expAll.total, 0)} sub="collected − all expenses" tone={periods.all.amount - expAll.total < 0 ? "warn" : undefined} />
+            </div>
+            <div className="mt-3 grid gap-4 xl:grid-cols-[1fr_360px]">
+                <Card title="Recent expenses" action={<span className="text-xs text-ink-3">{exp.total} recorded · {kes(exp.sum, 0)}</span>}>
+                    {exp.rows.length === 0 ? <Empty>Nothing recorded. Gateway credit purchases are entered on the Usage page; everything else here.</Empty> : (
+                        <Table head={["Date", "Category", "Amount", "Vendor", "Reference", "Note", "By", ""]}>
+                            {exp.rows.map((e) => (
+                                <tr key={e.id}>
+                                    <Td className="whitespace-nowrap">{new Date(e.spent_on).toISOString().slice(0, 10)}</Td>
+                                    <Td><Badge tone={e.category === "marketing" ? "info" : "neutral"}>{e.category}</Badge></Td>
+                                    <Td className="text-right font-medium">{kes(e.amount_kes)}</Td>
+                                    <Td className="text-xs">{e.vendor ?? "—"}</Td>
+                                    <Td mono>{e.reference ?? "—"}</Td>
+                                    <Td className="max-w-xs text-xs">{e.note ?? ""}</Td>
+                                    <Td className="text-xs text-ink-3">{e.admin_name}</Td>
+                                    <Td><form action={removeExpense}><input type="hidden" name="id" value={e.id} /><button className="text-xs text-red-700 hover:underline">delete</button></form></Td>
+                                </tr>
+                            ))}
+                        </Table>
+                    )}
+                    {Object.keys(expAll.byCat).length > 0 && (
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-line px-4 py-2 text-xs text-ink-3">
+                            {Object.entries(expAll.byCat).map(([c, v]) => <span key={c}>{c}: <b className="tnum text-ink">{kes(v, 0)}</b></span>)}
+                            <span>gateway credits: <b className="tnum text-ink">{kes(expAll.gatewayCredits, 0)}</b></span>
+                        </div>
+                    )}
+                </Card>
+                <Card title="Record an expense"><div className="px-4 py-3"><ExpenseForm categories={[...CATEGORIES]} /></div></Card>
+            </div>
+
             <Card title="By month" className="mt-5">
-                <Table head={["Month", "Cash in", "Payments", "Units sold", "Live sent", "Failed", "Sandbox", "Sign-ups", "→ paid"]}>
+                <Table head={["Month", "Cash in", "Expenses", "Payments", "Units sold", "Live sent", "Failed", "Sandbox", "Sign-ups", "→ paid"]}>
                     {months.map((m) => (
                         <tr key={m.m} className={m.cash === 0 && m.live === 0 && m.signups === 0 ? "text-ink-3" : ""}>
                             <Td mono>{m.m}</Td>
                             <Td className="text-right font-medium">{m.cash > 0 ? kes(m.cash, 0) : "—"}</Td>
+                            <Td className="text-right text-red-800">{expByMonth[m.m] ? kes(expByMonth[m.m], 0) : "—"}</Td>
                             <Td className="text-right">{m.payments || "—"}</Td>
                             <Td className="text-right">{m.units > 0 ? num(m.units) : "—"}</Td>
                             <Td className="text-right">{m.live || "—"}</Td>

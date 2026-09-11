@@ -2,6 +2,9 @@ import Link from "next/link";
 import { scanSent, byAccount, sentCounts } from "@/lib/db/compliance";
 import { Card, Table, Td, PageHeader, Empty, Badge, Filters, Field, inputCls, Stat } from "@/components/ui";
 import { when, truncate, num, pct } from "@/lib/format";
+import { warningCount } from "@/lib/db/verdicts";
+import { Button } from "@/components/ui";
+import { warnAccount, suspendAccount } from "./actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Compliance" };
@@ -13,6 +16,7 @@ export default async function Compliance({ searchParams }: { searchParams: Promi
     const userId = sp.user ? Number(sp.user) : undefined;
     const [scan, counts] = await Promise.all([scanSent({ sinceDays: days, minSeverity: min, userId }), sentCounts(days)]);
     const accounts = byAccount(scan.hits, counts);
+    const warnings = await Promise.all(accounts.map((a) => warningCount(a.userId)));
     const totalSent = [...counts.values()].reduce((a, b) => a + b, 0);
 
     return (
@@ -32,8 +36,8 @@ export default async function Compliance({ searchParams }: { searchParams: Promi
 
             <Card title="By account" className="mb-4">
                 {accounts.length === 0 ? <Empty>Nothing sent in this window reads as marketing.</Empty> : (
-                    <Table head={["Account", "Sent", "Flagged", "Rate", "Blocking", "What keeps appearing", "Example"]}>
-                        {accounts.map((a) => (
+                    <Table head={["Account", "Sent", "Flagged", "Rate", "Blocking", "What keeps appearing", "Example", "Action"]}>
+                        {accounts.map((a, i) => (
                             <tr key={a.userId}>
                                 <Td><Link href={`/users/${a.userId}`} className="font-medium text-brand hover:underline">{a.owner_name}</Link><div className="text-xs text-ink-3">{a.owner_email}</div></Td>
                                 <Td className="text-right">{num(a.sent)}</Td>
@@ -42,6 +46,22 @@ export default async function Compliance({ searchParams }: { searchParams: Promi
                                 <Td className="text-right">{a.blocked > 0 ? <Badge tone="danger">{a.blocked}</Badge> : "—"}</Td>
                                 <Td className="text-xs">{a.topFlags.join(", ")}</Td>
                                 <Td className="max-w-md text-xs"><Link href={`/messages/${a.sample.id}`} className="text-ink-2 hover:text-brand">{truncate(a.sample.message, 100)}</Link></Td>
+                                <Td>
+                                    <div className="flex flex-col gap-1">
+                                        {warnings[i] > 0 && <span className="text-[11px] text-amber-800">{warnings[i]} prior warning{warnings[i] === 1 ? "" : "s"}</span>}
+                                        <form action={warnAccount} className="flex gap-1">
+                                            <input type="hidden" name="userId" value={a.userId} />
+                                            <input type="hidden" name="messageIds" value={scan.hits.filter((h) => h.userId === a.userId).slice(0, 10).map((h) => h.id).join(",")} />
+                                            <input type="hidden" name="reason" value={`Marketing content was sent through the transactional route: ${a.topFlags.map((f) => f.split(" ")[0]).join(", ")}. Example: "${truncate(a.sample.message, 120)}"`} />
+                                            <Button type="submit" kind="warn">Warn</Button>
+                                        </form>
+                                        <form action={suspendAccount} className="flex gap-1">
+                                            <input type="hidden" name="userId" value={a.userId} />
+                                            <input type="hidden" name="reason" value={`Suspended for marketing content through the transactional route after ${warnings[i]} warning(s). Flagged ${a.flagged} of ${a.sent} messages in ${days} days.`} />
+                                            <Button type="submit" kind="danger">Suspend</Button>
+                                        </form>
+                                    </div>
+                                </Td>
                             </tr>
                         ))}
                     </Table>

@@ -1,5 +1,6 @@
 import { query, one, type Params } from "./pool";
 import type { MessageRow } from "./types";
+import { LATEST_VERDICT_JOIN, reviewWhere, type ReviewFilter } from "./verdicts";
 
 export interface MessageFilters {
     q?: string;              // phone or content
@@ -9,14 +10,17 @@ export interface MessageFilters {
     from?: string;           // YYYY-MM-DD
     to?: string;
     dlr?: "received" | "none";
+    /** review state from the latest verdict */
+    review?: ReviewFilter;
 }
 
 const BASE = `
     SELECT m.id, m.userId, m.senderId, m.phoneNumber, m.message, m.isTest, m.deliveryStatus,
            m.deliveryCode, m.deliveryDetail, m.deliveredAt, m.dlrReceivedAt, m.providerId,
            m.transactionId, m.cost, m.reason, m.retryAttempts, m.createdAt,
-           u.name AS owner_name, u.email AS owner_email
-    FROM SMSMsg m JOIN users u ON u.id = m.userId`;
+           u.name AS owner_name, u.email AS owner_email,
+           rv.verdict AS review_verdict, rv.is_human AS review_is_human, rv.reviewer AS review_reviewer, rv.confidence AS review_confidence
+    FROM SMSMsg m JOIN users u ON u.id = m.userId ${LATEST_VERDICT_JOIN}`;
 
 function build(f: MessageFilters) {
     const where: string[] = [];
@@ -37,6 +41,7 @@ function build(f: MessageFilters) {
     if (f.to) { where.push("m.createdAt < DATE_ADD(?, INTERVAL 1 DAY)"); params.push(`${f.to} 00:00:00`); }
     if (f.dlr === "received") where.push("m.dlrReceivedAt IS NOT NULL");
     if (f.dlr === "none") where.push("m.dlrReceivedAt IS NULL");
+    if (f.review) where.push(reviewWhere(f.review));
     return { w: where.length ? `WHERE ${where.join(" AND ")}` : "", params };
 }
 
@@ -44,7 +49,7 @@ export async function listMessages(f: MessageFilters, limit: number, offset: num
     const { w, params } = build(f);
     const rows = await query<MessageRow>(`${BASE} ${w} ORDER BY m.createdAt DESC LIMIT ${limit} OFFSET ${offset}`, params);
     const [{ n }] = await query<MessageRow & { n: number }>(
-        `SELECT COUNT(*) AS n FROM SMSMsg m JOIN users u ON u.id = m.userId ${w}`, params
+        `SELECT COUNT(*) AS n FROM SMSMsg m JOIN users u ON u.id = m.userId ${LATEST_VERDICT_JOIN} ${w}`, params
     );
     return { rows, total: Number(n) };
 }
@@ -56,7 +61,7 @@ export async function getMessage(id: number) {
 export async function statusBreakdown(f: MessageFilters) {
     const { w, params } = build(f);
     return query<MessageRow & { deliveryStatus: string; n: number }>(
-        `SELECT m.deliveryStatus, COUNT(*) AS n FROM SMSMsg m JOIN users u ON u.id = m.userId ${w} GROUP BY m.deliveryStatus ORDER BY n DESC`,
+        `SELECT m.deliveryStatus, COUNT(*) AS n FROM SMSMsg m JOIN users u ON u.id = m.userId ${LATEST_VERDICT_JOIN} ${w} GROUP BY m.deliveryStatus ORDER BY n DESC`,
         params
     );
 }

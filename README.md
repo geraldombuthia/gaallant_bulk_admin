@@ -15,10 +15,27 @@ own audited actions.
 | **Payments** | M-Pesa top-ups with status breakdown and sums for any filter. |
 | **Pricing** | View the active ladder and history. Superadmin: publish a new ladder, validated (prices fall with volume, tiers don't overlap). |
 | **Sign-ins** | Every dashboard and admin sign-in, with a hotspot list of addresses repeatedly failing in the last 24h. |
-| **Finance** | Cash in vs revenue earned. Units sold, consumed, deferred (liability), gross margin. Reconciles the ledger against payments and derived consumption against messages sent, listing any account whose books disagree. Twelve-month table, top accounts. |
+| **Finance** | Cash in by period (last hour, today, 7d, 30d, this year, 12 months, all time) vs revenue earned. Units sold, consumed, deferred (liability), gross margin. Reconciles the ledger against payments and derived consumption against messages sent, listing any account whose books disagree. Company **expenses** by category (marketing, infrastructure, fees, ...) alongside gateway purchases; net after expenses. Twelve-month table, top accounts. |
 | **Usage & runway** | Messages per hour / day / week with failures, busiest hours, sign-ups and active senders per day, 30-day projections for messages, cash and sign-ups. Gateway balance polled and charted; **runway** in days at the current burn; low-credit reminders on a configurable interval. Record gateway purchases (spend, unit cost); set monthly targets and see actuals against them. |
-| **Compliance** | What was actually sent, scanned for marketing content and grouped by account. Catches abuse through template variables, which approval cannot. |
+| **Compliance** | What was actually sent, scanned for marketing content and grouped by account. Catches abuse through template variables, which approval cannot. Warn or suspend an account from here; warnings are counted. |
+| **Human review** | The queue of things an automated reviewer was not sure about -- templates, messages, accounts. A human decision on a template resolves its request automatically. Filter templates by "human review requested". |
+| **Email** | Send to one address, one account, or a segment (paying, unpaid, idle 30d, all active, admins). `{{name}}` and `{{email}}` are filled per recipient; never BCC; capped at 500. Every message is logged before sending, so a failed batch can be re-sent. |
 | **Audit log** | Every admin action with before/after state, reason, and IP. Nothing in this app can edit or delete it. |
+
+## What you need to add
+
+Things the console cannot supply itself. Each one degrades cleanly until it
+is set; nothing else breaks.
+
+| Setting | Where | Why | Until then |
+|---|---|---|---|
+| `BULK_SMS_PASSWORD` | admin `.env` | HostPinnacle's balance endpoint (`/SMSApi/reports/userCredit`) authenticates with the account **password**, not the API key -- confirmed by calling it. Needed for gateway balance, runway and low-credit reminders. | Runway shows "balance unknown"; reminders never fire. |
+| `EMAIL_PASS` (Google app password) | admin `.env` **and** main app `.env` | Gmail has refused the current credentials with `535` since Sep 2025. Needed for the Email page and for the main app's password resets and notifications. | Email page records every send as failed with the SMTP reason; nothing is lost, and failed rows can be re-sent. |
+| Cron for `/api/alerts/run` | wherever the app is hosted | Reminders and balance polling run only when something calls this. Hourly is right; it is idempotent. | The Usage page still computes runway on load; you just get no push. |
+| `REVIEW_API_TOKEN` handed to the AI reviewer | your automation | The review API is what an AI uses to work the queue, record verdicts, and escalate. | The endpoints answer 401. |
+| `ENFORCE_API_MAY_SUSPEND=1` | admin `.env`, optional | Lets the API suspend accounts directly. Off by default: an automated reviewer can *request* suspension and a person decides. | API suspensions become human-review requests. |
+| `GATEWAY_COST_PER_SMS` | admin `.env` | The margin estimate on Finance. Set it to what HostPinnacle actually charges you per segment. | Defaults to 0.30. |
+| Git remote | -- | This repo has no origin yet. | Local history only. |
 
 ## Run
 
@@ -41,6 +58,12 @@ POST /api/review           analyse text -- { content } or { contents[] }, kind: 
 GET  /api/review/queue     templates awaiting review, each with its analysis
 GET  /api/review/scan      sent traffic that reads as marketing, by account
 POST /api/review/decide    { templateId, decision, note, reviewer } -- audited under REVIEW_API_ACTOR
+POST /api/review/request   ask a human to look at a template, message or account
+GET  /api/review/requests  open human-review requests (paged)
+GET  /api/review/unreviewed  sent messages with no verdict yet -- the AI work queue (paged)
+POST /api/review/verdicts  record up to 500 verdicts; is_human is always 0 via the API
+GET  /api/review/verdicts  counts by review state
+POST /api/review/enforce   warn | suspend | request_suspension on an account
 GET  /api/alerts/status    runway without side effects
 GET  /api/alerts/run       poll the gateway if stale, remind admins if low -- call hourly from cron
 ```
@@ -49,6 +72,18 @@ Every review response carries the transactional-only policy it implements,
 so a model can cite it. The gateway balance endpoint needs the account
 password (`BULK_SMS_PASSWORD`), not the API key; without it runway shows
 "balance unknown" and everything else works.
+
+## Messages: AI first, human confirms
+
+Traffic will be too much to read. The flow that scales:
+
+1. `GET /api/review/unreviewed` -- a page of sent messages nobody has checked, each with the deterministic flags attached.
+2. The AI decides and `POST /api/review/verdicts` -- clean, marketing, or unsure, with a confidence. Recorded with `is_human = 0`.
+3. Anything `unsure`, or `marketing` below `escalate_below` (default 0.8), also opens a human-review request.
+4. A person works `/reviews`, or filters `/messages` by *AI flagged, unconfirmed*, and clicks **Confirm marketing** / **Confirm clean**. That writes a verdict with `is_human = 1` -- the "confirmed, not AI" flag every filter keys on.
+5. Repeat offenders: `POST /api/review/enforce` with `warn` (counted), or `request_suspension` (a person decides). The compliance page has the same buttons.
+
+Filters on `/messages`: unreviewed · flagged (AI or human) · AI flagged, unconfirmed · AI unsure · AI clean · human confirmed marketing · human confirmed clean.
 
 ## Design notes
 
