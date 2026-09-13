@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { recordPurchase, saveSettings, saveTarget, type S } from "./actions";
+import { recordPurchase, saveSettings, saveTarget, importPurchases, type S } from "./actions";
 import { Button, Notice } from "@/components/ui";
 
 const input = "mt-1 block w-full rounded-md border border-line bg-surface px-2.5 py-1.5 text-[13px] focus:border-brand";
@@ -57,6 +57,17 @@ export function SettingsForm({ settings }: { settings: Record<string, string> })
             <label className={label}>Notify admin user ids<input name="alert_recipients" defaultValue={settings.alert_recipients} className={input} placeholder="1,4" /></label>
             <p className="text-xs text-ink-3">Reminders appear as dashboard notifications for these accounts. Email follows once the mailer is working.</p>
             <Button type="submit" disabled={pending} className="w-full">{pending ? "Saving…" : "Save settings"}</Button>
+        </form>
+    );
+}
+
+export function ImportForm() {
+    const [state, action, pending] = useActionState<S, FormData>(() => importPurchases(), {});
+    return (
+        <form action={action} className="space-y-2">
+            <Msgs s={state} />
+            <p className="text-xs text-ink-3">Pulls the gateway&apos;s own credit history and records any top-up not already here. Units are exact; KSh is estimated at the configured unit cost until you correct it from the receipt.</p>
+            <Button type="submit" disabled={pending} className="w-full">{pending ? "Importing…" : "Import from gateway history"}</Button>
         </form>
     );
 }

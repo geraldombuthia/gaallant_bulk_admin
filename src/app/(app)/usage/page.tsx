@@ -4,7 +4,7 @@ import { computeRunway } from "@/lib/alerts";
 import { Card, Stat, Table, Td, PageHeader, Empty, Badge, Button } from "@/components/ui";
 import { Bars, Line } from "@/components/chart";
 import { kes, num, pct, when, ago } from "@/lib/format";
-import { PurchaseForm, SettingsForm, TargetForm } from "./forms";
+import { PurchaseForm, SettingsForm, TargetForm, ImportForm } from "./forms";
 import { removePurchase, pollNow, checkNow } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -134,6 +134,7 @@ export default async function Usage() {
 
                 <div className="space-y-4">
                     <Card title="Record a gateway purchase"><div className="px-4 py-3"><PurchaseForm /></div></Card>
+                    <Card title="Import from gateway"><div className="px-4 py-3"><ImportForm /></div></Card>
                     <Card title="Set a monthly target"><div className="px-4 py-3"><TargetForm month={thisMonth} /></div></Card>
                     <Card title="Alert settings"><div className="px-4 py-3"><SettingsForm settings={settings} /></div></Card>
                     <Card title="Scheduling">

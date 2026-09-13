@@ -29,12 +29,12 @@ is set; nothing else breaks.
 
 | Setting | Where | Why | Until then |
 |---|---|---|---|
-| `BULK_SMS_PASSWORD` | admin `.env` | HostPinnacle's balance endpoint (`/SMSApi/reports/userCredit`) authenticates with the account **password**, not the API key -- confirmed by calling it. Needed for gateway balance, runway and low-credit reminders. | Runway shows "balance unknown"; reminders never fire. |
+| ~~`BULK_SMS_PASSWORD`~~ | — | **Done 13 Sep 2026.** Balance polls via `/SMSApi/account/readstatus`; purchases import from `/SMSApi/account/readcredithistory`. | — |
 | ~~`EMAIL_PASS`~~ | — | **Done 13 Sep 2026.** New app password in both `.env` files; verified. | — |
 | Cron for `/api/alerts/run` | wherever the app is hosted | Reminders and balance polling run only when something calls this. Hourly is right; it is idempotent. | The Usage page still computes runway on load; you just get no push. |
 | `REVIEW_API_TOKEN` handed to the AI reviewer | your automation | The review API is what an AI uses to work the queue, record verdicts, and escalate. | The endpoints answer 401. |
 | `ENFORCE_API_MAY_SUSPEND=1` | admin `.env`, optional | Lets the API suspend accounts directly. Off by default: an automated reviewer can *request* suspension and a person decides. | API suspensions become human-review requests. |
-| `GATEWAY_COST_PER_SMS` | admin `.env` | The margin estimate on Finance. Set it to what HostPinnacle actually charges you per segment. | Defaults to 0.30. |
+| `GATEWAY_COST_PER_SMS` | admin `.env` | Set to **0.20** from HostPinnacle's price list (every pack to 250k units; 0.18 at 500k, 0.16 at 1M). Change it if you buy a larger pack. | Defaults to 0.20. |
 | Git remote | -- | This repo has no origin yet. | Local history only. |
 
 ## Run
@@ -69,9 +69,8 @@ GET  /api/alerts/run       poll the gateway if stale, remind admins if low -- ca
 ```
 
 Every review response carries the transactional-only policy it implements,
-so a model can cite it. The gateway balance endpoint needs the account
-password (`BULK_SMS_PASSWORD`), not the API key; without it runway shows
-"balance unknown" and everything else works.
+so a model can cite it. The gateway account endpoints need the portal password (`BULK_SMS_PASSWORD`)
+with a lowercase `userid`; the API key is refused there.
 
 ## Messages: AI first, human confirms
 

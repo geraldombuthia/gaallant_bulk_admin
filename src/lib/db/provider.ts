@@ -50,40 +50,82 @@ export async function recordBalance(units: number | null, raw: string | null, er
 }
 
 /**
- * Polls HostPinnacle for the account's credit balance. The endpoint takes
- * the account password (not the API key) as a form field; without
- * BULK_SMS_PASSWORD it records an "unconfigured" snapshot and returns null.
- * The response is plain text "status=... | ..." or JSON depending on the
- * account, so both are parsed.
+ * Polls HostPinnacle for the account's credit balance.
+ *
+ * POST /SMSApi/account/readstatus with userid + password (lowercase
+ * "userid" -- the docs say userId, the server says otherwise) and
+ * output=json returns { account: { smsBalance } }. The documented
+ * /SMSApi/reports/userCredit answers 204 with no body whatever it is
+ * sent; the API key on these account endpoints answers "Invalid
+ * credentials". Confirmed against the live account on 13 Sep 2026.
  */
 export async function pollProviderBalance(): Promise<{ units: number | null; error: string | null }> {
     const base = process.env.BULK_SMS_BASE_URL;
     const userid = process.env.BULK_SMS_USERID;
     const password = process.env.BULK_SMS_PASSWORD;
     if (!base || !userid) { await recordBalance(null, null, "BULK_SMS_BASE_URL / BULK_SMS_USERID not set"); return { units: null, error: "gateway not configured" }; }
-    if (!password) { await recordBalance(null, null, "BULK_SMS_PASSWORD not set"); return { units: null, error: "BULK_SMS_PASSWORD not set -- the balance endpoint needs the account password" }; }
+    if (!password) { await recordBalance(null, null, "BULK_SMS_PASSWORD not set"); return { units: null, error: "BULK_SMS_PASSWORD not set -- the account endpoints need the portal password" }; }
     try {
-        const res = await fetch(`${base}/SMSApi/reports/userCredit`, {
+        const res = await fetch(`${base}/SMSApi/account/readstatus`, {
             method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: new URLSearchParams({ userid, password, output: "json" }), signal: AbortSignal.timeout(15000),
         });
         const text = await res.text();
         let units: number | null = null;
+        let reason: string | null = null;
         try {
             const j = JSON.parse(text);
-            const cand = j.credits ?? j.credit ?? j.balance ?? j.userCredit ?? j.data?.credits ?? j.data?.balance;
-            if (cand != null && !Number.isNaN(Number(cand))) units = Number(cand);
-        } catch {
-            const m = text.match(/(?:credits?|balance)\s*[=:]\s*([\d.]+)/i);
-            if (m) units = Number(m[1]);
-        }
-        const error = res.ok && units != null ? null : `HTTP ${res.status}: ${text.slice(0, 200) || "empty body"}`;
-        await recordBalance(units, text, error);
-        return { units, error };
+            const r = j.response ?? j;
+            if (r.status === "success" && r.account?.smsBalance != null) units = Number(r.account.smsBalance);
+            else reason = r.msg ?? r.status ?? null;
+        } catch { reason = "unparseable body"; }
+        const error = res.ok && units != null && !Number.isNaN(units) ? null : `HTTP ${res.status}: ${reason ?? text.slice(0, 200) ?? "empty body"}`;
+        await recordBalance(error ? null : units, text, error);
+        return { units: error ? null : units, error };
     } catch (e) {
         const error = e instanceof Error ? e.message : String(e);
         await recordBalance(null, null, error);
         return { units: null, error };
+    }
+}
+
+/**
+ * Pulls the gateway's own credit history and records any purchase not
+ * already in provider_purchases, matched on the gateway's history id
+ * (kept in `reference`). Units come from the row; the KSh amount is
+ * parsed from the comment when it is an M-Pesa recharge, otherwise left
+ * for the admin to fill in from the receipt.
+ */
+export async function importProviderPurchases(adminId: number): Promise<{ seen: number; imported: number; error: string | null }> {
+    const base = process.env.BULK_SMS_BASE_URL;
+    const userid = process.env.BULK_SMS_USERID;
+    const password = process.env.BULK_SMS_PASSWORD;
+    if (!base || !userid || !password) return { seen: 0, imported: 0, error: "gateway credentials not set" };
+    try {
+        const res = await fetch(`${base}/SMSApi/account/readcredithistory`, {
+            method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({ userid, password, output: "json" }), signal: AbortSignal.timeout(20000),
+        });
+        const j = await res.json();
+        const list: { history: { id: string; credits: string; type: string; addedTime: string; creditComments: string } }[] = j.response?.historyList ?? [];
+        let imported = 0;
+        for (const { history: h } of list) {
+            if (h.type !== "CREDIT" || !(Number(h.credits) > 0)) continue;
+            const ref = `hp:${h.id}`;
+            const exists = await one<RowDataPacket>("SELECT id FROM provider_purchases WHERE reference = ?", [ref]);
+            if (exists) continue;
+            const units = Number(h.credits);
+            // KSh is not in the response; at the list price of 0.20/unit the
+            // packs are exact, so that is the default until corrected
+            const amount = Math.round(units * Number(process.env.GATEWAY_COST_PER_SMS ?? 0.2) * 100) / 100;
+            const when = new Date(Number(h.addedTime)).toISOString().slice(0, 10);
+            await exec("INSERT INTO provider_purchases (purchased_at, amount_kes, units, reference, note, recorded_by) VALUES (?, ?, ?, ?, ?, ?)",
+                [when, amount, units, ref, `Imported from gateway history. ${h.creditComments ?? ""}`.slice(0, 500), adminId]);
+            imported++;
+        }
+        return { seen: list.length, imported, error: null };
+    } catch (e) {
+        return { seen: 0, imported: 0, error: e instanceof Error ? e.message : String(e) };
     }
 }
 

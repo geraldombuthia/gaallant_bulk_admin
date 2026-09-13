@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth/session";
-import { addPurchase, deletePurchase, setSetting, setTarget, pollProviderBalance } from "@/lib/db/provider";
+import { addPurchase, deletePurchase, setSetting, setTarget, pollProviderBalance, importProviderPurchases } from "@/lib/db/provider";
 import { runAlertCheck } from "@/lib/alerts";
 import { audit } from "@/lib/audit";
 import { clientIp } from "@/lib/request";
@@ -60,4 +60,15 @@ export async function checkNow(): Promise<void> {
     await requireAdmin();
     await runAlertCheck(true);
     revalidatePath("/usage");
+}
+
+export async function importPurchases(): Promise<S> {
+    return wrap(async () => {
+        const admin = await requireAdmin();
+        const r = await importProviderPurchases(admin.id);
+        if (r.error) throw new Error(r.error);
+        await audit({ adminId: admin.id, action: "provider.import", targetType: "provider", after: r, ip: await clientIp() });
+        revalidatePath("/usage");
+        return r.imported === 0 ? `Gateway history has ${r.seen} entries; all already recorded.` : `Imported ${r.imported} purchase${r.imported === 1 ? "" : "s"} from the gateway (${r.seen} in history). Check the KSh amounts against your receipts.`;
+    });
 }
