@@ -1,6 +1,8 @@
 import { query, one, exec, transaction, type Params, type Runner } from "./pool";
 import type { SupportRow, SupportReplyRow } from "./types";
 import { audit } from "../audit";
+import { emails } from "../emailTemplate";
+import { sendCustomerEmail } from "../email";
 
 const BASE = `
     SELECT s.*, u.name AS owner_name, u.email AS owner_email,
@@ -52,6 +54,11 @@ export async function reply(id: number, body: string, admin: { id: number; name:
              VALUES (?, ?, ?, 'system', 'info', 0, ?, NOW(), NOW())`,
             [s.userId, `Reply to "${s.subject}"`, `${b}\n\n-- ${admin.name}, Gallant support`, JSON.stringify({ supportId: id })]
         );
+        return s;
+    }).then(async (s) => {
+        // After the transaction commits: the email is best effort
+        const [u] = await query<SupportRow & { name: string }>("SELECT name FROM users WHERE id = ?", [s.userId]);
+        await sendCustomerEmail(s.userId, emails.supportReply({ name: u?.name, subject: s.subject, reply: b, adminName: admin.name }), admin);
     });
 }
 

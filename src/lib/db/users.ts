@@ -1,6 +1,8 @@
 import { query, one, exec, transaction, type Params, type Runner } from "./pool";
 import type { UserRow, MessageRow, PaymentRow, SignInRow, SupportRow } from "./types";
 import { audit } from "../audit";
+import { emails } from "../emailTemplate";
+import { sendCustomerEmail } from "../email";
 
 export interface UserFilters {
     q?: string;
@@ -98,6 +100,8 @@ export async function setStatus(userId: number, status: StatusChange, reason: st
     if (u.role === "superadmin") throw new Error("A superadmin's status cannot be changed here");
     await exec("UPDATE users SET statuc = ?, updated_at = NOW() WHERE id = ?", [status, userId]);
     await audit({ adminId: admin.id, action: `user.${status}`, targetType: "user", targetId: userId, reason: reason.trim(), before: { statuc: u.statuc }, after: { statuc: status }, ip });
+    const [full] = await query<UserRow>("SELECT name FROM users WHERE id = ?", [userId]);
+    await sendCustomerEmail(userId, emails.accountStatus({ name: full?.name, status, reason: reason.trim() }), admin);
     // Keys of a banned or suspended account must stop working; the main
     // app's checkUserStatus middleware reads statuc, so this is enough.
 }
@@ -151,5 +155,9 @@ export async function adjustCredits(userId: number, delta: number, reason: strin
              `${reason.trim()}\n\nBalance is now ${after}.`, JSON.stringify({ delta, before, after })]
         );
         return { before, after };
+    }).then(async (r) => {
+        const [full] = await query<UserRow>("SELECT name FROM users WHERE id = ?", [userId]);
+        await sendCustomerEmail(userId, emails.creditsAdjusted({ name: full?.name, delta, balance: r.after, reason: reason.trim() }), admin);
+        return r;
     });
 }

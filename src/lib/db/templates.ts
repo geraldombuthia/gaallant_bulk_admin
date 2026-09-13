@@ -2,6 +2,8 @@ import { query, one, exec, transaction, type Params, type Runner } from "./pool"
 import type { TemplateRow, TemplateStatus } from "./types";
 import { audit } from "../audit";
 import { notifyUser } from "../notify";
+import { emails } from "../emailTemplate";
+import { sendCustomerEmail } from "../email";
 
 const BASE = `
     SELECT t.*, u.name AS owner_name, u.email AS owner_email, r.name AS reviewer_name,
@@ -132,7 +134,11 @@ export async function decide(
         // A human decision closes any open request for one
         await run("UPDATE review_requests SET status = 'resolved', resolved_by = ?, resolution = ?, resolved_at = NOW() WHERE targetType = 'template' AND targetId = ? AND status = 'open'",
             [admin.id, `Decided: ${status}`, templateId]);
-        return { status, owner: t.userId };
+        return { status, owner: t.userId, template: t };
+    }).then(async (r) => {
+        const [u] = await query<TemplateRow & { name: string }>("SELECT name FROM users WHERE id = ?", [r.owner]);
+        await sendCustomerEmail(r.owner, emails.templateDecision({ name: u?.name, templateName: r.template.template_name, slug: r.template.slug, decision: r.status, note: decision === "approve" ? null : note.trim() }), admin);
+        return { status: r.status, owner: r.owner };
     });
 }
 

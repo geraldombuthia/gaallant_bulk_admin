@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import { query, exec } from "./db/pool";
 import type { RowDataPacket } from "mysql2/promise";
 import { audit } from "./audit";
+import { emails, brandAttachments } from "./emailTemplate";
 
 /**
  * Outbound email from the console. Every message is written to
@@ -63,10 +64,12 @@ export async function sendBatch(a: Audience, subject: string, body: string, admi
 
     let sent = 0, failed = 0;
     const rows = await query<RowDataPacket & { id: number; recipient: string; subject: string; body: string }>("SELECT id, recipient, subject, body FROM admin_emails WHERE batchId = ?", [batchId]);
+    const names = new Map(rows.map((row, i) => [row.id, recipients[i]?.name ?? null]));
     const worker = async (row: typeof rows[number]) => {
         if (!t) { await exec("UPDATE admin_emails SET status = 'failed', error = ? WHERE id = ?", ["EMAIL_ADDRESS / EMAIL_PASS not set", row.id]); failed++; return; }
         try {
-            const info = await t.sendMail({ from, to: row.recipient, subject: row.subject, text: row.body, html: row.body.replace(/\n/g, "<br>") });
+            const rendered = emails.compose({ name: names.get(row.id) ?? null, subject: row.subject, body: row.body });
+            const info = await t.sendMail({ from, to: row.recipient, subject: row.subject, text: rendered.text, html: rendered.html, attachments: brandAttachments() });
             await exec("UPDATE admin_emails SET status = 'sent', provider_id = ?, sent_at = NOW() WHERE id = ?", [info.messageId ?? null, row.id]); sent++;
         } catch (e) {
             await exec("UPDATE admin_emails SET status = 'failed', error = ? WHERE id = ?", [(e instanceof Error ? e.message : String(e)).slice(0, 500), row.id]); failed++;
@@ -90,4 +93,29 @@ export async function emailsForUser(userId: number, limit = 10) {
     return query<RowDataPacket & { id: number; subject: string; status: string; error: string | null; created_at: Date; sent_at: Date | null }>(
         `SELECT id, subject, status, error, created_at, sent_at FROM admin_emails WHERE userId = ? ORDER BY id DESC LIMIT ${limit}`, [userId]
     );
+}
+
+/**
+ * One branded email to one account, from an admin action. Logged in
+ * admin_emails first, sent second, never thrown: a mailer outage must not
+ * roll back a review decision or a credit change that already happened.
+ */
+export async function sendCustomerEmail(userId: number, mail: { subject: string; html: string; text: string }, admin: { id: number }): Promise<"sent" | "failed" | "skipped"> {
+    const rows = await query<RowDataPacket & { email: string; emailNotifications: number }>("SELECT email, emailNotifications FROM users WHERE id = ?", [userId]);
+    const u = rows[0];
+    if (!u || !u.email) return "skipped";
+    const batchId = randomUUID();
+    const r = await exec("INSERT INTO admin_emails (batchId, sent_by, userId, recipient, subject, body, status) VALUES (?, ?, ?, ?, ?, ?, 'queued')",
+        [batchId, admin.id, userId, u.email, mail.subject.slice(0, 200), mail.text]);
+    const t = transporter();
+    if (!t) { await exec("UPDATE admin_emails SET status = 'failed', error = 'EMAIL_ADDRESS / EMAIL_PASS not set' WHERE id = ?", [r.insertId]); return "failed"; }
+    try {
+        const from = `"${process.env.EMAIL_FROM_NAME ?? "Gallant SMS"}" <${process.env.EMAIL_ADDRESS}>`;
+        const info = await t.sendMail({ from, to: u.email, subject: mail.subject, text: mail.text, html: mail.html, attachments: brandAttachments() });
+        await exec("UPDATE admin_emails SET status = 'sent', provider_id = ?, sent_at = NOW() WHERE id = ?", [info.messageId ?? null, r.insertId]);
+        return "sent";
+    } catch (e) {
+        await exec("UPDATE admin_emails SET status = 'failed', error = ? WHERE id = ?", [(e instanceof Error ? e.message : String(e)).slice(0, 500), r.insertId]);
+        return "failed";
+    } finally { t.close(); }
 }

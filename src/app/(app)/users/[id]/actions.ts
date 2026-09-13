@@ -7,6 +7,9 @@ import { setStatus, setRole, adjustCredits } from "@/lib/db/users";
 import { notifyUser } from "@/lib/notify";
 import { audit } from "@/lib/audit";
 import { clientIp } from "@/lib/request";
+import { emails } from "@/lib/emailTemplate";
+import { sendCustomerEmail } from "@/lib/email";
+import { getUser } from "@/lib/db/users";
 
 export type ActionState = { ok?: string; error?: string };
 
@@ -50,6 +53,8 @@ export async function sendNotice(_p: ActionState, form: FormData): Promise<Actio
         const { id, title, message } = z.object({ id: z.coerce.number(), title: z.string().min(3).max(120), message: z.string().min(5).max(2000) }).parse(Object.fromEntries(form));
         await notifyUser(id, { title, message: `${message}\n\n-- ${admin.name}, Gallant`, type: "system", severity: "info" });
         await audit({ adminId: admin.id, action: "user.notify", targetType: "user", targetId: id, after: { title }, ip: await clientIp() });
-        return "Notification sent.";
+        const u = await getUser(id);
+        const outcome = await sendCustomerEmail(id, emails.notice({ name: u?.name, title, message, adminName: admin.name }), admin);
+        return outcome === "sent" ? "Notification sent, and emailed." : "Notification sent on the dashboard; the email did not go (see the Email page).";
     });
 }

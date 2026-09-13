@@ -82,7 +82,7 @@ export async function runAlertCheck(force = false) {
     const remindEvery = Number(settings.alert_interval_hours) * 3600 * 1000;
     const lastAlertAt = settings.last_alert_at ? new Date(settings.last_alert_at).getTime() : 0;
     const due = Date.now() - lastAlertAt > remindEvery;
-    let notified: number[] = [];
+    const notified: number[] = [];
 
     if (runway.level !== "ok" && runway.level !== "unknown" && (due || force)) {
         const recipients = String(settings.alert_recipients).split(",").map((s) => Number(s.trim())).filter((n) => n > 0);

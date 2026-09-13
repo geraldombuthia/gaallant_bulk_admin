@@ -2,6 +2,8 @@ import { query, one, exec } from "./pool";
 import type { RowDataPacket } from "mysql2/promise";
 import { audit } from "../audit";
 import { notifyUser } from "../notify";
+import { emails } from "../emailTemplate";
+import { sendCustomerEmail } from "../email";
 
 export type Verdict = "clean" | "marketing" | "unsure";
 export interface VerdictRow extends RowDataPacket {
@@ -106,6 +108,8 @@ export async function warnUser(userId: number, reason: string, admin: { id: numb
         type: "alert", severity: "warning", metadata: { warning: prior + 1, messages: sampleMessageIds },
     });
     await audit({ adminId: admin.id, action: "user.warn", targetType: "user", targetId: userId, reason: reason.trim(), after: { warning: prior + 1, messages: sampleMessageIds }, ip });
+    const [u] = await query<RowDataPacket & { name: string }>("SELECT name FROM users WHERE id = ?", [userId]);
+    await sendCustomerEmail(userId, emails.warning({ name: u?.name, reason: reason.trim(), count: prior + 1 }), admin);
     return prior + 1;
 }
 export async function warningCount(userId: number) {
