@@ -15,7 +15,7 @@ const g = globalThis as unknown as { __gallantPool?: Pool };
 export function pool(): Pool {
     if (!g.__gallantPool) {
         const { db } = env();
-        g.__gallantPool = mysql.createPool({
+        const pool = mysql.createPool({
             ...db,
             waitForConnections: true,
             connectionLimit: 8,
@@ -23,8 +23,15 @@ export function pool(): Pool {
             // money: nothing here does arithmetic on it without parsing.
             decimalNumbers: false,
             dateStrings: false,
+            // Must match the main app's Sequelize connection (+00:00): NOW()
+            // and every DATETIME written by either app are then the same
+            // clock. With the server's local zone here, the same moment was
+            // stored three hours apart depending on which app wrote it.
             timezone: "Z",
+            connectAttributes: {},
         });
+        pool.on("connection", (conn) => { conn.query("SET time_zone = '+00:00'"); });
+        g.__gallantPool = pool;
     }
     return g.__gallantPool;
 }

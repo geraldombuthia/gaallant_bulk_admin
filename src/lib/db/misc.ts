@@ -38,12 +38,13 @@ export async function listAudit(f: { action?: string; admin?: string; target?: s
 }
 
 // ---- sign-ins ----
-export async function listSignIns(f: { outcome?: "success" | "failed"; q?: string }, limit: number, offset: number) {
+export async function listSignIns(f: { outcome?: "success" | "failed"; q?: string; source?: "dashboard" | "admin" | "script" }, limit: number, offset: number) {
     const where: string[] = []; const params: Params = [];
     if (f.outcome) { where.push("d.outcome = ?"); params.push(f.outcome); }
+    if (f.source) { where.push("d.source = ?"); params.push(f.source); }
     if (f.q) { const like = `%${f.q}%`; where.push("(d.attempted_identifier LIKE ? OR d.ip_address LIKE ? OR u.email LIKE ?)"); params.push(like, like, like); }
     const w = where.length ? `WHERE ${where.join(" AND ")}` : "";
-    const rows = await query<SignInRow>(`SELECT d.id, d.userId, d.outcome, d.attempted_identifier, d.access_time, d.ip_address, d.browser_name, d.os_name, d.device_type, u.name AS user_name FROM device_access d LEFT JOIN users u ON u.id = d.userId ${w} ORDER BY d.access_time DESC LIMIT ${limit} OFFSET ${offset}`, params);
+    const rows = await query<SignInRow>(`SELECT d.id, d.userId, d.outcome, d.source, d.attempted_identifier, d.access_time, d.ip_address, d.browser_name, d.browser_version, d.os_name, d.device_type, u.name AS user_name FROM device_access d LEFT JOIN users u ON u.id = d.userId ${w} ORDER BY d.access_time DESC LIMIT ${limit} OFFSET ${offset}`, params);
     const [{ n }] = await query<SignInRow & { n: number }>(`SELECT COUNT(*) AS n FROM device_access d LEFT JOIN users u ON u.id = d.userId ${w}`, params);
     return { rows, total: Number(n) };
 }
@@ -51,7 +52,7 @@ export async function listSignIns(f: { outcome?: "success" | "failed"; q?: strin
 export async function failureHotspots(hours = 24) {
     return query<RowDataPacket & { ip_address: string; n: number; identifiers: number; last: Date }>(
         `SELECT ip_address, COUNT(*) AS n, COUNT(DISTINCT attempted_identifier) AS identifiers, MAX(access_time) AS last
-         FROM device_access WHERE outcome = 'failed' AND access_time >= DATE_SUB(NOW(), INTERVAL ? HOUR)
+         FROM device_access WHERE outcome = 'failed' AND source <> 'script' AND access_time >= DATE_SUB(NOW(), INTERVAL ? HOUR)
          GROUP BY ip_address HAVING n >= 3 ORDER BY n DESC LIMIT 10`, [hours]
     );
 }

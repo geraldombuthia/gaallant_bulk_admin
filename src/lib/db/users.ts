@@ -70,7 +70,7 @@ export async function userPayments(id: number, limit = 20) {
 }
 export async function userSignIns(id: number, limit = 15) {
     return query<SignInRow>(
-        `SELECT id, outcome, access_time, ip_address, browser_name, os_name, device_type FROM device_access WHERE userId = ? ORDER BY access_time DESC LIMIT ${limit}`, [id]
+        `SELECT id, outcome, source, access_time, ip_address, browser_name, browser_version, os_name, device_type FROM device_access WHERE userId = ? ORDER BY access_time DESC LIMIT ${limit}`, [id]
     );
 }
 export async function userSupport(id: number) {

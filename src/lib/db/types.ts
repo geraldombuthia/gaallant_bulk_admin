@@ -133,7 +133,9 @@ export interface SignInRow extends RowDataPacket {
     id: number;
     userId: number | null;
     outcome: "success" | "failed";
+    source?: "dashboard" | "admin" | "script";
     attempted_identifier: string | null;
+    browser_version?: string | null;
     access_time: Date;
     ip_address: string | null;
     browser_name: string | null;

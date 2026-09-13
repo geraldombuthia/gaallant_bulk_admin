@@ -1,4 +1,5 @@
 import bcrypt from "bcrypt";
+import { UAParser } from "ua-parser-js";
 import type { RowDataPacket } from "mysql2/promise";
 import { one, exec } from "../db/pool";
 import type { AdminSession } from "./session";
@@ -80,13 +81,32 @@ export async function login(email: string, password: string, ip: string, userAge
     return { ok: true, admin: { id: user.id, name: user.name, email: user.email, role: user.role } };
 }
 
-/** Same table the main app uses, so sign-in history is in one place. Never throws. */
+/** One spelling per address: ::1 and ::ffff:a.b.c.d are IPv4 to a reader. */
+export function normaliseIp(ip: string): string {
+    const s = (ip ?? "").trim();
+    if (s === "::1") return "127.0.0.1";
+    const m = s.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i);
+    return m ? m[1] : s;
+}
+
+/**
+ * Same table the main app uses, so sign-in history is in one place. The
+ * browser is parsed from the user agent as the main app does; the fact
+ * that it was the admin console goes in `source`, its own column. It used
+ * to be written into browser_name, which is why the customer's list said
+ * "admin-dashboard on Unknown". Never throws.
+ */
 async function recordSignIn(userId: number | null, outcome: "success" | "failed", identifier: string, ip: string, userAgent: string) {
     try {
+        const ua = new UAParser(userAgent).getResult();
+        const isScript = !userAgent || /^(node|curl|wget|python|undici|node-fetch|axios|postman)/i.test(userAgent) || !ua.browser.name;
         await exec(
-            `INSERT INTO device_access (userId, outcome, attempted_identifier, access_time, ip_address, user_agent, browser_name, updatedAt)
-             VALUES (?, ?, ?, NOW(), ?, ?, ?, NOW())`,
-            [userId, outcome, identifier.slice(0, 190), ip.slice(0, 45), userAgent.slice(0, 500), "admin-dashboard"]
+            `INSERT INTO device_access (userId, outcome, source, attempted_identifier, access_time, ip_address, user_agent,
+                                        browser_name, browser_version, os_name, os_version, device_vendor, device_model, device_type, updatedAt)
+             VALUES (?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+            [userId, outcome, isScript ? "script" : "admin", identifier.slice(0, 190), normaliseIp(ip).slice(0, 45), userAgent.slice(0, 500),
+             ua.browser.name ?? null, ua.browser.version ?? null, ua.os.name ?? null, ua.os.version ?? null,
+             ua.device.vendor ?? null, ua.device.model ?? null, ua.device.type ?? null]
         );
     } catch {
         // Sign-in history must never block a sign-in

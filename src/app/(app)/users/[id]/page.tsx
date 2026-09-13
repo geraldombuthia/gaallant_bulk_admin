@@ -84,7 +84,7 @@ export default async function UserPage({ params }: { params: Promise<{ id: strin
                         <Card title="Sign-ins">
                             {signIns.length === 0 ? <Empty>None recorded.</Empty> : (
                                 <Table head={["When", "Result", "From", "Device"]}>
-                                    {signIns.map((s) => <tr key={s.id}><Td className="whitespace-nowrap text-xs">{when(s.access_time)}</Td><Td><StatusBadge status={s.outcome} /></Td><Td mono>{s.ip_address ?? "—"}</Td><Td className="text-xs text-ink-3">{[s.browser_name, s.os_name, s.device_type].filter(Boolean).join(" · ") || "—"}</Td></tr>)}
+                                    {signIns.map((s) => <tr key={s.id}><Td className="whitespace-nowrap text-xs">{when(s.access_time)}</Td><Td><StatusBadge status={s.outcome} />{s.source === "admin" && <div className="text-[11px] text-ink-3">admin console</div>}{s.source === "script" && <div className="text-[11px] text-ink-3">script</div>}</Td><Td mono>{s.ip_address ?? "—"}</Td><Td className="text-xs text-ink-3">{s.source === "script" ? "non-browser client" : [s.browser_name ? `${s.browser_name}${s.browser_version ? " " + String(s.browser_version).split(".")[0] : ""}` : null, s.os_name, s.device_type].filter(Boolean).join(" · ") || "unknown browser"}</Td></tr>)}
                                 </Table>
                             )}
                         </Card>

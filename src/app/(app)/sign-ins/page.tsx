@@ -1,19 +1,19 @@
 import Link from "next/link";
 import { listSignIns, failureHotspots } from "@/lib/db/misc";
 import { paging } from "@/lib/db/pool";
-import { Card, Table, Td, StatusBadge, Pager, Filters, Field, inputCls, Empty, PageHeader } from "@/components/ui";
+import { Card, Table, Td, StatusBadge, Pager, Filters, Field, inputCls, Empty, PageHeader, Badge } from "@/components/ui";
 import { when, ago } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Sign-ins" };
 
-export default async function SignIns({ searchParams }: { searchParams: Promise<{ outcome?: string; q?: string; page?: string }> }) {
+export default async function SignIns({ searchParams }: { searchParams: Promise<{ outcome?: string; q?: string; source?: string; page?: string }> }) {
     const sp = await searchParams;
     const { page, size, offset } = paging(sp, 50);
-    const [{ rows, total }, hotspots] = await Promise.all([listSignIns({ outcome: sp.outcome as "success" | "failed" | undefined, q: sp.q }, size, offset), failureHotspots(24)]);
+    const [{ rows, total }, hotspots] = await Promise.all([listSignIns({ outcome: sp.outcome as "success" | "failed" | undefined, q: sp.q, source: sp.source as "dashboard" | "admin" | "script" | undefined }, size, offset), failureHotspots(24)]);
     return (
         <>
-            <PageHeader title="Sign-ins" subtitle="Every dashboard and admin sign-in, successful or not. Failures cluster before a takeover." />
+            <PageHeader title="Sign-ins" subtitle="Every sign-in to the customer dashboard, the admin console, or by a script -- successful or not. Failures cluster before a takeover." />
             {hotspots.length > 0 && (
                 <Card title="Addresses with repeated failures · 24h" className="mb-4">
                     <Table head={["Address", "Failures", "Accounts tried", "Last attempt"]}>
@@ -24,18 +24,20 @@ export default async function SignIns({ searchParams }: { searchParams: Promise<
             <Filters reset="/sign-ins">
                 <Field label="Search"><input name="q" defaultValue={sp.q} placeholder="email, address" className={`${inputCls} w-56`} /></Field>
                 <Field label="Outcome"><select name="outcome" defaultValue={sp.outcome ?? ""} className={inputCls}><option value="">Any</option><option value="success">Success</option><option value="failed">Failed</option></select></Field>
+                <Field label="Where"><select name="source" defaultValue={sp.source ?? ""} className={inputCls}><option value="">Any</option><option value="dashboard">Customer dashboard</option><option value="admin">Admin console</option><option value="script">Scripts and tooling</option></select></Field>
             </Filters>
             <Card>
                 {rows.length === 0 ? <Empty>Nothing recorded.</Empty> : (
-                    <Table head={["When", "Result", "Account", "Tried as", "From", "Client"]}>
+                    <Table head={["When", "Result", "Where", "Account", "Tried as", "From", "Client"]}>
                         {rows.map((s) => (
                             <tr key={s.id}>
                                 <Td className="whitespace-nowrap text-xs">{when(s.access_time)}</Td>
                                 <Td><StatusBadge status={s.outcome} /></Td>
+                                <Td><Badge tone={s.source === "admin" ? "info" : "neutral"}>{s.source === "admin" ? "admin console" : s.source === "script" ? "script" : "dashboard"}</Badge></Td>
                                 <Td>{s.userId ? <Link href={`/users/${s.userId}`} className="text-brand hover:underline">{s.user_name}</Link> : <span className="text-ink-3">unknown</span>}</Td>
                                 <Td className="text-xs">{s.attempted_identifier ?? "—"}</Td>
                                 <Td mono>{s.ip_address ?? "—"}</Td>
-                                <Td className="text-xs text-ink-3">{[s.browser_name, s.os_name, s.device_type].filter(Boolean).join(" · ") || "—"}</Td>
+                                <Td className="text-xs text-ink-3">{s.source === "script" ? <span className="font-mono">non-browser client</span> : [s.browser_name ? `${s.browser_name}${s.browser_version ? " " + String(s.browser_version).split(".")[0] : ""}` : null, s.os_name, s.device_type].filter(Boolean).join(" · ") || "unknown browser"}</Td>
                             </tr>
                         ))}
                     </Table>
