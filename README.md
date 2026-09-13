@@ -30,7 +30,7 @@ is set; nothing else breaks.
 | Setting | Where | Why | Until then |
 |---|---|---|---|
 | `BULK_SMS_PASSWORD` | admin `.env` | HostPinnacle's balance endpoint (`/SMSApi/reports/userCredit`) authenticates with the account **password**, not the API key -- confirmed by calling it. Needed for gateway balance, runway and low-credit reminders. | Runway shows "balance unknown"; reminders never fire. |
-| `EMAIL_PASS` (Google app password) | admin `.env` **and** main app `.env` | Gmail has refused the current credentials with `535` since Sep 2025. Needed for the Email page and for the main app's password resets and notifications. | Email page records every send as failed with the SMTP reason; nothing is lost, and failed rows can be re-sent. |
+| ~~`EMAIL_PASS`~~ | — | **Done 13 Sep 2026.** New app password in both `.env` files; verified. | — |
 | Cron for `/api/alerts/run` | wherever the app is hosted | Reminders and balance polling run only when something calls this. Hourly is right; it is idempotent. | The Usage page still computes runway on load; you just get no push. |
 | `REVIEW_API_TOKEN` handed to the AI reviewer | your automation | The review API is what an AI uses to work the queue, record verdicts, and escalate. | The endpoints answer 401. |
 | `ENFORCE_API_MAY_SUSPEND=1` | admin `.env`, optional | Lets the API suspend accounts directly. Off by default: an automated reviewer can *request* suspension and a person decides. | API suspensions become human-review requests. |
