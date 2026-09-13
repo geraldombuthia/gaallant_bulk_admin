@@ -9,11 +9,11 @@ import { VerdictBadge } from "@/components/verdict";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Messages" };
 
-type SP = { q?: string; status?: string; mode?: string; user?: string; from?: string; to?: string; dlr?: string; review?: string; page?: string };
+type SP = { q?: string; status?: string; mode?: string; user?: string; from?: string; to?: string; dlr?: string; review?: string; purpose?: string; page?: string };
 
 export default async function Messages({ searchParams }: { searchParams: Promise<SP> }) {
     const sp = await searchParams;
-    const f = { q: sp.q, status: sp.status, mode: sp.mode as "live" | "test" | undefined, user: sp.user, from: sp.from, to: sp.to, dlr: sp.dlr as "received" | "none" | undefined, review: (sp.review || undefined) as ReviewFilter | undefined };
+    const f = { q: sp.q, status: sp.status, mode: sp.mode as "live" | "test" | undefined, user: sp.user, from: sp.from, to: sp.to, dlr: sp.dlr as "received" | "none" | undefined, review: (sp.review || undefined) as ReviewFilter | undefined, purpose: (sp.purpose || undefined) as "customer" | "internal" | undefined };
     const { page, size, offset } = paging(sp, 50);
     const [{ rows, total }, breakdown] = await Promise.all([listMessages(f, size, offset), statusBreakdown(f)]);
     const qs = new URLSearchParams(Object.entries(sp).filter(([k, v]) => v && k !== "page") as [string, string][]).toString();
@@ -34,6 +34,9 @@ export default async function Messages({ searchParams }: { searchParams: Promise
                 </Field>
                 <Field label="Mode">
                     <select name="mode" defaultValue={sp.mode ?? ""} className={inputCls}><option value="">Any</option><option value="live">Live</option><option value="test">Sandbox</option></select>
+                </Field>
+                <Field label="Paid by">
+                    <select name="purpose" defaultValue={sp.purpose ?? ""} className={inputCls}><option value="">Any</option><option value="customer">Customer (billed)</option><option value="internal">The app (running cost)</option></select>
                 </Field>
                 <Field label="Delivery report">
                     <select name="dlr" defaultValue={sp.dlr ?? ""} className={inputCls}><option value="">Any</option><option value="received">Received</option><option value="none">None</option></select>
@@ -65,7 +68,7 @@ export default async function Messages({ searchParams }: { searchParams: Promise
                         {rows.map((m) => (
                             <tr key={m.id} className="hover:bg-surface-2/60">
                                 <Td className="whitespace-nowrap"><Link href={`/messages/${m.id}`} className="text-brand hover:underline">{when(m.createdAt)}</Link></Td>
-                                <Td mono>{m.phoneNumber}{m.isTest ? <div><Badge>sandbox</Badge></div> : null}</Td>
+                                <Td mono>{m.phoneNumber}<div className="flex gap-1">{m.isTest ? <Badge>sandbox</Badge> : null}{m.purpose === "internal" ? <Badge tone="warn">app</Badge> : null}</div></Td>
                                 <Td className="max-w-md [overflow-wrap:anywhere]"><span className="text-xs">{truncate(m.message, 110)}</span></Td>
                                 <Td><Link href={`/users/${m.userId}`} className="text-brand hover:underline">{m.owner_name}</Link></Td>
                                 <Td><StatusBadge status={m.deliveryStatus} />{m.reason && <div className="mt-0.5 max-w-[12rem] truncate text-[11px] text-ink-3" title={m.reason}>{m.reason}</div>}</Td>

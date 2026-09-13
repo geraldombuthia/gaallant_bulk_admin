@@ -12,7 +12,9 @@ export const metadata = { title: "Finance" };
 export default async function Finance() {
     const gatewayCost = Number(process.env.GATEWAY_COST_PER_SMS ?? 0.3);
     const [f, months, top, recon, periods, exp, expAll, exp30, expByMonth] = await Promise.all([financeSummary(gatewayCost), monthly(12), topAccounts(), accountReconciliation(), cashByPeriod(), listExpenses({}, 25, 0), expenseSummary(null), expenseSummary(30), expensesMonthly(12)]);
-    const net = f.revenue.recognised - expAll.total;
+    // Net after everything: recorded expenses, gateway purchases, and the
+    // gateway units the platform burned on its own traffic
+    const net = f.revenue.recognised - expAll.total - f.internal.cost;
     const r = f.reconciliation;
     const unitsOk = Math.abs(r.gap) <= Math.max(5, r.sentObserved * 0.05);
     const cashOk = Math.abs(r.cashGap) < 1;
@@ -93,13 +95,17 @@ export default async function Finance() {
             )}
 
             <h2 className="mb-2 mt-5 text-[11px] font-semibold uppercase tracking-wider text-ink-3">Expenses · what it costs to run</h2>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-                <Stat label="Spend · 30d" value={kes(exp30.total, 0)} sub={`gateway credits ${kes(exp30.gatewayCredits, 0)}`} />
-                <Stat label="Spend · all time" value={kes(expAll.total, 0)} sub={`${Object.keys(expAll.byCat).length} categor${Object.keys(expAll.byCat).length === 1 ? "y" : "ies"} + gateway`} />
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+                <Stat label="Spend · 30d" value={kes(exp30.total + f.internal.cost30, 0)} sub={`gateway credits ${kes(exp30.gatewayCredits, 0)} · app's own SMS ${kes(f.internal.cost30, 0)}`} />
+                <Stat label="Spend · all time" value={kes(expAll.total + f.internal.cost, 0)} sub={`${Object.keys(expAll.byCat).length} categor${Object.keys(expAll.byCat).length === 1 ? "y" : "ies"} + gateway + app SMS`} />
+                <Stat label="App's own SMS · all time" value={kes(f.internal.cost, 0)} sub={`${num(f.internal.count)} messages · ${num(f.internal.units)} units at ${kes(gatewayCost)} · ${num(f.internal.count30)} in 30d`} tone={f.internal.count > 0 ? "warn" : undefined} />
                 <Stat label="Marketing · all time" value={kes(expAll.byCat.marketing ?? 0, 0)} />
-                <Stat label="Net · all time" value={kes(net, 0)} sub="recognised revenue − all expenses" tone={net < 0 ? "danger" : undefined} />
-                <Stat label="Cash net · all time" value={kes(periods.all.amount - expAll.total, 0)} sub="collected − all expenses" tone={periods.all.amount - expAll.total < 0 ? "warn" : undefined} />
+                <Stat label="Net · all time" value={kes(net, 0)} sub="recognised revenue − every cost" tone={net < 0 ? "danger" : undefined} />
+                <Stat label="Cash net · all time" value={kes(periods.all.amount - expAll.total - f.internal.cost, 0)} sub="collected − every cost" tone={periods.all.amount - expAll.total - f.internal.cost < 0 ? "warn" : undefined} />
             </div>
+            <p className="mt-2 text-xs text-ink-3">
+                The app&apos;s own SMS -- verification codes, alerts, the operator&apos;s dashboard sends -- go through the same gateway but are billed to nobody. They are a running cost, kept apart from the units sold to customers so consumption and revenue above are customer traffic only.
+            </p>
             <div className="mt-3 grid gap-4 xl:grid-cols-[1fr_360px]">
                 <Card title="Recent expenses" action={<span className="text-xs text-ink-3">{exp.total} recorded · {kes(exp.sum, 0)}</span>}>
                     {exp.rows.length === 0 ? <Empty>Nothing recorded. Gateway credit purchases are entered on the Usage page; everything else here.</Empty> : (

@@ -42,11 +42,18 @@ export async function financeSummary(gatewayCost: number) {
          FROM Credits`
     );
     const [bal] = await query<RowDataPacket & { outstanding: string; accounts: number }>(`SELECT SUM(creditBalance) AS outstanding, COUNT(*) AS accounts FROM SMSCredits`);
-    const [msgs] = await query<RowDataPacket & { live: number; live30: number; failed30: number; test30: number }>(
-        `SELECT SUM(isTest = 0 AND deliveryStatus NOT IN ('failed','error','rejected')) AS live,
-                SUM(isTest = 0 AND deliveryStatus NOT IN ('failed','error','rejected') AND createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS live30,
-                SUM(isTest = 0 AND deliveryStatus IN ('failed','error','rejected') AND createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS failed30,
-                SUM(isTest = 1 AND createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS test30
+    // "live" here means customer traffic: sent on an account's credit. The
+    // platform's own sends are counted separately as a running cost, so they
+    // never inflate consumption or the revenue derived from it.
+    const [msgs] = await query<RowDataPacket & { live: number; live30: number; failed30: number; test30: number; internalUnits: string | null; internalUnits30: string | null; internalCount: number; internalCount30: number }>(
+        `SELECT SUM(isTest = 0 AND purpose = 'customer' AND deliveryStatus NOT IN ('failed','error','rejected')) AS live,
+                SUM(isTest = 0 AND purpose = 'customer' AND deliveryStatus NOT IN ('failed','error','rejected') AND createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS live30,
+                SUM(isTest = 0 AND purpose = 'customer' AND deliveryStatus IN ('failed','error','rejected') AND createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS failed30,
+                SUM(isTest = 1 AND createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS test30,
+                SUM(CASE WHEN isTest = 0 AND purpose = 'internal' AND deliveryStatus NOT IN ('failed','error','rejected') THEN COALESCE(cost, 1) ELSE 0 END) AS internalUnits,
+                SUM(CASE WHEN isTest = 0 AND purpose = 'internal' AND deliveryStatus NOT IN ('failed','error','rejected') AND createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY) THEN COALESCE(cost, 1) ELSE 0 END) AS internalUnits30,
+                SUM(isTest = 0 AND purpose = 'internal' AND deliveryStatus NOT IN ('failed','error','rejected')) AS internalCount,
+                SUM(isTest = 0 AND purpose = 'internal' AND deliveryStatus NOT IN ('failed','error','rejected') AND createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS internalCount30
          FROM SMSMsg`
     );
 
@@ -59,7 +66,11 @@ export async function financeSummary(gatewayCost: number) {
     const avgPrice = R(ledger.unitsPriced) > 0 ? R(ledger.weighted) / R(ledger.unitsPriced) : (unitsSold > 0 ? R(ledger.paid) / unitsSold : 0);
     const recognised = consumed * avgPrice;
     const deferred = outstanding * avgPrice;
+    // Gateway cost of serving customers (against revenue) and of running the
+    // platform (an expense) are kept apart
     const gatewayCostTotal = R(msgs.live) * gatewayCost;
+    const internalCost = R(msgs.internalUnits) * gatewayCost;
+    const internalCost30 = R(msgs.internalUnits30) * gatewayCost;
 
     return {
         cash: { ok30: R(cash.ok), okCount30: R(cash.okCount), pending: R(cash.pending), failed30: R(cash.failed), okAll: R(cash.okAll) },
@@ -68,6 +79,7 @@ export async function financeSummary(gatewayCost: number) {
         revenue: { recognised, deferred, gatewayCost: gatewayCostTotal, grossMargin: recognised - gatewayCostTotal,
             marginPct: recognised > 0 ? (recognised - gatewayCostTotal) / recognised : null },
         messages: { live: R(msgs.live), live30: R(msgs.live30), failed30: R(msgs.failed30), test30: R(msgs.test30) },
+        internal: { count: R(msgs.internalCount), count30: R(msgs.internalCount30), units: R(msgs.internalUnits), units30: R(msgs.internalUnits30), cost: internalCost, cost30: internalCost30 },
         reconciliation: {
             // consumed (derived from money) vs sent (observed): should be close.
             // Multi-segment messages consume more than one unit, so sent <= consumed

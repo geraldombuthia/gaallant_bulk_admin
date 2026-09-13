@@ -1,4 +1,4 @@
-import { hourly, daily, weekly, hourOfDay, usersDaily, cashDaily, project } from "@/lib/db/usage";
+import { hourly, daily, weekly, hourOfDay, usersDaily, cashDaily, project, purposeDaily } from "@/lib/db/usage";
 import { listPurchases, purchaseTotals, balanceHistory, getSettings, listTargets, monthActuals } from "@/lib/db/provider";
 import { computeRunway } from "@/lib/alerts";
 import { Card, Stat, Table, Td, PageHeader, Empty, Badge, Button } from "@/components/ui";
@@ -11,9 +11,12 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Usage & runway" };
 
 export default async function Usage() {
-    const [h48, d90, w26, hod, users, cash, purchases, ptotals, balHist, settings, targets, runway] = await Promise.all([
-        hourly(48), daily(90), weekly(26), hourOfDay(30), usersDaily(60), cashDaily(90), listPurchases(), purchaseTotals(), balanceHistory(60), getSettings(), listTargets(6), computeRunway(),
+    const [h48, d90, w26, hod, users, cash, purchases, ptotals, balHist, settings, targets, runway, split] = await Promise.all([
+        hourly(48), daily(90), weekly(26), hourOfDay(30), usersDaily(60), cashDaily(90), listPurchases(), purchaseTotals(), balanceHistory(60), getSettings(), listTargets(6), computeRunway(), purposeDaily(30),
     ]);
+    const gatewayCost = Number(process.env.GATEWAY_COST_PER_SMS ?? 0.2);
+    const internalUnits30 = split.reduce((a, d) => a + d.internalUnits, 0);
+    const customer30 = split.reduce((a, d) => a + d.customer, 0);
     const pm = project(d90.map((d) => d.sent), 28, 30);
     const pc = project(cash.map((c) => c.amount), 28, 30);
     const pu = project(users.map((u) => u.signups), 28, 30);
@@ -77,6 +80,14 @@ export default async function Usage() {
                     </div>
                 </Card>
             </div>
+
+            <Card title="Who the gateway units went to · last 30d" className="mt-4"
+                action={<span className="text-xs text-ink-3">customers <b className="tnum text-ink">{num(customer30)}</b> · the app <b className="tnum text-ink">{num(split.reduce((a, d) => a + d.internal, 0))}</b> ({num(internalUnits30)} units, {kes(internalUnits30 * gatewayCost)} running cost)</span>}>
+                <div className="grid gap-4 px-4 py-3 md:grid-cols-2">
+                    <div><div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-3">Customer sends (billed)</div><Bars points={split.map((d) => ({ t: d.t, sent: d.customer }))} height={60} label="Customer messages per day" /></div>
+                    <div><div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-3">The app&apos;s own sends (running cost)</div><Bars points={split.map((d) => ({ t: d.t, sent: d.internal }))} height={60} color="var(--warn)" label="Platform messages per day" /></div>
+                </div>
+            </Card>
 
             <Card title="Accounts per day · last 60d" className="mt-4">
                 <div className="grid gap-4 px-4 py-3 md:grid-cols-3">

@@ -12,10 +12,12 @@ export interface MessageFilters {
     dlr?: "received" | "none";
     /** review state from the latest verdict */
     review?: ReviewFilter;
+    /** customer (billed to an account) or internal (the platform's own) */
+    purpose?: "customer" | "internal";
 }
 
 const BASE = `
-    SELECT m.id, m.userId, m.senderId, m.phoneNumber, m.message, m.isTest, m.deliveryStatus,
+    SELECT m.id, m.userId, m.senderId, m.phoneNumber, m.message, m.isTest, m.purpose, m.deliveryStatus,
            m.deliveryCode, m.deliveryDetail, m.deliveredAt, m.dlrReceivedAt, m.providerId,
            m.transactionId, m.cost, m.reason, m.retryAttempts, m.createdAt,
            u.name AS owner_name, u.email AS owner_email,
@@ -42,6 +44,7 @@ function build(f: MessageFilters) {
     if (f.dlr === "received") where.push("m.dlrReceivedAt IS NOT NULL");
     if (f.dlr === "none") where.push("m.dlrReceivedAt IS NULL");
     if (f.review) where.push(reviewWhere(f.review));
+    if (f.purpose) { where.push("m.purpose = ?"); params.push(f.purpose); }
     return { w: where.length ? `WHERE ${where.join(" AND ")}` : "", params };
 }
 

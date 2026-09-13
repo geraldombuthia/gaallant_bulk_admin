@@ -32,6 +32,7 @@ export interface MessageRow extends RowDataPacket {
     phoneNumber: string;
     message: string;
     isTest: number;
+    purpose?: "customer" | "internal";
     deliveryStatus: string | null;
     deliveryCode: string | null;
     deliveryDetail: string | null;

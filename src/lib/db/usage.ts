@@ -42,6 +42,17 @@ export async function hourOfDay(days = 30) {
     return out;
 }
 
+/** Customer vs the app's own traffic per day, so the running cost is visible against sales */
+export async function purposeDaily(days = 30) {
+    const rows = await query<RowDataPacket & { t: string; customer: number; internal: number; internalUnits: string }>(
+        `SELECT DATE_FORMAT(createdAt, '%Y-%m-%d') AS t, SUM(purpose = 'customer') AS customer, SUM(purpose = 'internal') AS internal,
+                SUM(CASE WHEN purpose = 'internal' THEN COALESCE(cost, 1) ELSE 0 END) AS internalUnits
+         FROM SMSMsg WHERE isTest = 0 AND deliveryStatus NOT IN ('failed','error','rejected') AND createdAt >= DATE_SUB(CURDATE(), INTERVAL ? DAY) GROUP BY t`, [days - 1]
+    );
+    const m = Object.fromEntries(rows.map((r) => [r.t, r]));
+    return dense([], days, "day").map((p) => ({ t: p.t, customer: R(m[p.t]?.customer), internal: R(m[p.t]?.internal), internalUnits: R(m[p.t]?.internalUnits) }));
+}
+
 export async function usersDaily(days = 60) {
     const signups = await query<RowDataPacket & { t: string; n: number }>(
         `SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS t, COUNT(*) AS n FROM users WHERE role = 'user' AND created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY) GROUP BY t`, [days - 1]

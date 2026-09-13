@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { overview, failureHotspots } from "@/lib/db/misc";
+import { latestBalance } from "@/lib/db/provider";
 import { listTemplates } from "@/lib/db/templates";
 import { listSupport } from "@/lib/db/support";
 import { Card, Stat, Table, Td, StatusBadge, Empty, PageHeader, Badge } from "@/components/ui";
@@ -9,12 +10,14 @@ import { review, worst } from "@/lib/compliance";
 export const dynamic = "force-dynamic";
 
 export default async function Overview() {
-    const [o, pending, support, hotspots] = await Promise.all([
+    const [o, pending, support, hotspots, gateway] = await Promise.all([
         overview(),
         listTemplates({ status: "pending" }, 8, 0),
         listSupport("open", undefined, 8, 0),
-        failureHotspots(24),
+        failureHotspots(24), latestBalance(),
     ]);
+    const gatewayUnits = gateway?.ok && gateway.units != null ? Number(gateway.units) : null;
+    const gatewayCost = Number(process.env.GATEWAY_COST_PER_SMS ?? 0.2);
 
     const max = Math.max(1, ...o.daily.map((d) => d.sent));
 
@@ -22,6 +25,14 @@ export default async function Overview() {
         <>
             <PageHeader title="Overview" subtitle="Live traffic, money, and what needs a decision today." />
 
+            <div className="mb-3 grid grid-cols-2 gap-3 md:grid-cols-4">
+                <Stat label="Global messages available" value={gatewayUnits == null ? "—" : num(gatewayUnits)}
+                    sub={gatewayUnits == null ? "gateway balance not polled yet" : `on the gateway, shared by every account · polled ${ago(gateway?.polled_at)}`}
+                    tone={gatewayUnits != null && gatewayUnits < o.creditsOutstanding ? "danger" : gatewayUnits != null && gatewayUnits < 2000 ? "warn" : undefined} />
+                <Stat label="Sold to customers, unsent" value={num(o.creditsOutstanding)} sub={gatewayUnits != null ? `${num(Math.max(0, gatewayUnits - o.creditsOutstanding))} left after honouring them` : "units customers hold"} />
+                <Stat label="Customer sends · 30d" value={num(o.split.customer30)} sub="billed to accounts" />
+                <Stat label="App's own sends · 30d" value={num(o.split.internal30)} sub={`${num(o.split.internalUnits30)} units · ${kes(o.split.internalUnits30 * gatewayCost)} at ${kes(gatewayCost)}/unit · running cost`} tone={o.split.internal30 > 0 ? "warn" : undefined} />
+            </div>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
                 <Stat label="Messages today" value={num(o.messages.today)} sub={`${num(o.messages.d7)} this week`} />
                 <Stat label="Delivery rate · 7d" value={pct(o.messages.deliveryRate7)}

@@ -111,6 +111,14 @@ export async function overview() {
         `SELECT COUNT(*) AS failed24 FROM device_access WHERE outcome = 'failed' AND access_time >= DATE_SUB(NOW(), INTERVAL 24 HOUR)`
     );
     const [credits] = await query<RowDataPacket & { outstanding: string | null }>(`SELECT SUM(creditBalance) AS outstanding FROM SMSCredits`);
+    const [split] = await query<RowDataPacket & { internal30: number; customer30: number; internalUnits30: string | null; internalAll: number; internalUnitsAll: string | null }>(
+        `SELECT SUM(purpose = 'internal' AND createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS internal30,
+                SUM(purpose = 'customer' AND createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS customer30,
+                SUM(CASE WHEN purpose = 'internal' AND createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY) THEN COALESCE(cost, 1) ELSE 0 END) AS internalUnits30,
+                SUM(purpose = 'internal') AS internalAll,
+                SUM(CASE WHEN purpose = 'internal' THEN COALESCE(cost, 1) ELSE 0 END) AS internalUnitsAll
+         FROM SMSMsg WHERE isTest = 0 AND deliveryStatus NOT IN ('failed','error','rejected')`
+    );
     const daily = await query<RowDataPacket & { day: string; sent: number; failed: number }>(
         `SELECT DATE_FORMAT(createdAt, '%Y-%m-%d') AS day, COUNT(*) AS sent, SUM(deliveryStatus IN ('failed','error','rejected')) AS failed
          FROM SMSMsg WHERE isTest = 0 AND createdAt >= DATE_SUB(CURDATE(), INTERVAL 13 DAY) GROUP BY day ORDER BY day`
@@ -122,6 +130,7 @@ export async function overview() {
         payments: { amount7: Number(pay.amount7 ?? 0), count7: Number(pay.count7 ?? 0), amount30: Number(pay.amount30 ?? 0) },
         security: { failed24: Number(sec.failed24) },
         creditsOutstanding: Number(credits.outstanding ?? 0),
+        split: { internal30: Number(split.internal30 ?? 0), customer30: Number(split.customer30 ?? 0), internalUnits30: Number(split.internalUnits30 ?? 0), internalAll: Number(split.internalAll ?? 0), internalUnitsAll: Number(split.internalUnitsAll ?? 0) },
         // Dense: every one of the 14 days is present, zero when quiet, so the
         // chart keeps its frame instead of stretching one bar across it
         daily: (() => {
