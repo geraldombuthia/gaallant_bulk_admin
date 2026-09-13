@@ -1,5 +1,7 @@
 # Gallant Admin
 
+> New to this? Start with `../gallant_bulk_sms/docs/HANDOVER.md` — it covers both apps, what is settled, and what is open.
+
 Operations console for [gallant_bulk_sms](../gallant_bulk_sms). A separate
 Next.js app that reads the same MySQL database and writes only through its
 own audited actions.
