@@ -96,17 +96,27 @@ export function normaliseIp(ip: string): string {
  * to be written into browser_name, which is why the customer's list said
  * "admin-dashboard on Unknown". Never throws.
  */
+/** What we know about the client from its user agent; pure, so it is testable. */
+export function describeClient(userAgent: string) {
+    const ua = new UAParser(userAgent ?? "").getResult();
+    const isScript = !userAgent || /^(node|curl|wget|python|undici|node-fetch|axios|postman)/i.test(userAgent) || !ua.browser.name;
+    return {
+        source: (isScript ? "script" : "admin") as "script" | "admin",
+        browser_name: ua.browser.name ?? null, browser_version: ua.browser.version ?? null,
+        os_name: ua.os.name ?? null, os_version: ua.os.version ?? null,
+        device_vendor: ua.device.vendor ?? null, device_model: ua.device.model ?? null, device_type: ua.device.type ?? null,
+    };
+}
+
 async function recordSignIn(userId: number | null, outcome: "success" | "failed", identifier: string, ip: string, userAgent: string) {
     try {
-        const ua = new UAParser(userAgent).getResult();
-        const isScript = !userAgent || /^(node|curl|wget|python|undici|node-fetch|axios|postman)/i.test(userAgent) || !ua.browser.name;
+        const c = describeClient(userAgent);
         await exec(
             `INSERT INTO device_access (userId, outcome, source, attempted_identifier, access_time, ip_address, user_agent,
                                         browser_name, browser_version, os_name, os_version, device_vendor, device_model, device_type, updatedAt)
              VALUES (?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-            [userId, outcome, isScript ? "script" : "admin", identifier.slice(0, 190), normaliseIp(ip).slice(0, 45), userAgent.slice(0, 500),
-             ua.browser.name ?? null, ua.browser.version ?? null, ua.os.name ?? null, ua.os.version ?? null,
-             ua.device.vendor ?? null, ua.device.model ?? null, ua.device.type ?? null]
+            [userId, outcome, c.source, identifier.slice(0, 190), normaliseIp(ip).slice(0, 45), (userAgent ?? "").slice(0, 500),
+             c.browser_name, c.browser_version, c.os_name, c.os_version, c.device_vendor, c.device_model, c.device_type]
         );
     } catch {
         // Sign-in history must never block a sign-in
